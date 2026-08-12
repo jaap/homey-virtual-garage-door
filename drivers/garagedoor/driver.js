@@ -6,9 +6,13 @@ const { randomUUID } = require('crypto');
 module.exports = class VirtualGarageDoorDriver extends Homey.Driver {
 
   async onInit() {
-    this.homey.flow
-      .getActionCard('set_state')
+    const { flow } = this.homey;
+    flow.getActionCard('set_state')
       .registerRunListener(async ({ device, state }) => device.setReportedState(state));
+    flow.getActionCard('request_open')
+      .registerRunListener(async ({ device }) => device.requestState('open'));
+    flow.getActionCard('request_close')
+      .registerRunListener(async ({ device }) => device.requestState('close'));
   }
 
   async onPairListDevices() {

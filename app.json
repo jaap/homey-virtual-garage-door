@@ -38,8 +38,8 @@
           "nl": "Openen werd gevraagd"
         },
         "hint": {
-          "en": "Triggers when someone or something (e.g. Apple Home, the Homey app or a Flow) requests this garage door to open. The reported state does not change until a Flow reports it back.",
-          "nl": "Start wanneer iets of iemand (bijv. Apple Home, de Homey app of een Flow) vraagt om deze garagedeur te openen. De gerapporteerde status verandert pas wanneer een Flow deze terugmeldt."
+          "en": "Starts when something asks this garage door to open: Apple Home, the device tile in the Homey app, the built-in Open/Toggle cards, or the 'Request to open' card. Handle the request in this Flow and report the actual state back.",
+          "nl": "Start wanneer iets vraagt om deze garagedeur te openen: Apple Home, de apparaattegel in de Homey-app, de standaard Open/Wissel-kaarten of de kaart 'Vraag om te openen'. Verwerk het verzoek in deze Flow en rapporteer de werkelijke status terug."
         },
         "args": [
           {
@@ -56,9 +56,40 @@
           "nl": "Sluiten werd gevraagd"
         },
         "hint": {
-          "en": "Triggers when someone or something (e.g. Apple Home, the Homey app or a Flow) requests this garage door to close. The reported state does not change until a Flow reports it back.",
-          "nl": "Start wanneer iets of iemand (bijv. Apple Home, de Homey app of een Flow) vraagt om deze garagedeur te sluiten. De gerapporteerde status verandert pas wanneer een Flow deze terugmeldt."
+          "en": "Starts when something asks this garage door to close: Apple Home, the device tile in the Homey app, the built-in Close/Toggle cards, or the 'Request to close' card. Handle the request in this Flow and report the actual state back.",
+          "nl": "Start wanneer iets vraagt om deze garagedeur te sluiten: Apple Home, de apparaattegel in de Homey-app, de standaard Sluit/Wissel-kaarten of de kaart 'Vraag om te sluiten'. Verwerk het verzoek in deze Flow en rapporteer de werkelijke status terug."
         },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=garagedoor"
+          }
+        ]
+      },
+      {
+        "id": "garagedoor_state_changed",
+        "title": {
+          "en": "The door state changed",
+          "nl": "De deurstatus is veranderd"
+        },
+        "hint": {
+          "en": "Starts whenever a Flow reports a new door state. The tag contains the new state: closed, opening, open or closing.",
+          "nl": "Start wanneer een Flow een nieuwe deurstatus rapporteert. De tag bevat de nieuwe status: closed, opening, open of closing."
+        },
+        "tokens": [
+          {
+            "name": "garagedoor_state",
+            "type": "string",
+            "title": {
+              "en": "State",
+              "nl": "Status"
+            },
+            "example": {
+              "en": "closed"
+            }
+          }
+        ],
         "args": [
           {
             "type": "device",
@@ -99,33 +130,69 @@
             "values": [
               {
                 "id": "closed",
-                "label": {
+                "title": {
                   "en": "Closed",
                   "nl": "Gesloten"
                 }
               },
               {
                 "id": "opening",
-                "label": {
+                "title": {
                   "en": "Opening",
                   "nl": "Bezig met openen"
                 }
               },
               {
                 "id": "open",
-                "label": {
+                "title": {
                   "en": "Open",
                   "nl": "Open"
                 }
               },
               {
                 "id": "closing",
-                "label": {
+                "title": {
                   "en": "Closing",
                   "nl": "Bezig met sluiten"
                 }
               }
             ]
+          }
+        ]
+      },
+      {
+        "id": "request_open",
+        "title": {
+          "en": "Request to open",
+          "nl": "Vraag om te openen"
+        },
+        "hint": {
+          "en": "Asks the door to open by starting the 'Open was requested' trigger, exactly like Apple Home or the device tile would. The state does not change until a Flow reports it.",
+          "nl": "Vraagt om de deur te openen door de trigger 'Openen werd gevraagd' te starten, precies zoals Apple Home of de apparaattegel dat doet. De status verandert pas wanneer een Flow deze rapporteert."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=garagedoor"
+          }
+        ]
+      },
+      {
+        "id": "request_close",
+        "title": {
+          "en": "Request to close",
+          "nl": "Vraag om te sluiten"
+        },
+        "hint": {
+          "en": "Asks the door to close by starting the 'Close was requested' trigger, exactly like Apple Home or the device tile would. The state does not change until a Flow reports it.",
+          "nl": "Vraagt om de deur te sluiten door de trigger 'Sluiten werd gevraagd' te starten, precies zoals Apple Home of de apparaattegel dat doet. De status verandert pas wanneer een Flow deze rapporteert."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=garagedoor"
           }
         ]
       }

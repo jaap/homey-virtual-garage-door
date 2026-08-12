@@ -1,20 +1,11 @@
 'use strict';
 
 const VirtualGarageDoorDevice = require('../drivers/garagedoor/device');
-const { createDevice, externalSet } = require('./helpers');
+const { createDevice, requestViaCapability } = require('./helpers');
 
-const { STATES, REQUEST_REVERT_MS } = VirtualGarageDoorDevice;
-const AFTER_REVERT_WINDOW = REQUEST_REVERT_MS + 50;
+const { STATES } = VirtualGarageDoorDevice;
 
 describe('VirtualGarageDoorDevice', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   describe('initialization', () => {
     test('a fresh device defaults to closed, without firing any trigger', async () => {
       const device = createDevice();
@@ -27,7 +18,6 @@ describe('VirtualGarageDoorDevice', () => {
     });
 
     test('restores the last reported state from the store, even when capability values disagree', async () => {
-      // e.g. Homey went down right after a request, before the revert ran
       const device = createDevice({
         store: { reportedState: 'open' },
         capabilities: { garagedoor_closed: true, garagedoor_state: 'closed' },
@@ -58,12 +48,12 @@ describe('VirtualGarageDoorDevice', () => {
     });
   });
 
-  describe('requests', () => {
+  describe('requests through the garagedoor_closed capability', () => {
     test('an open request fires the open_requested trigger for this device', async () => {
       const device = createDevice();
       await device.onInit();
 
-      await externalSet(device, 'garagedoor_closed', false);
+      await requestViaCapability(device, 'garagedoor_closed', false);
 
       expect(device._triggered).toHaveLength(1);
       expect(device._triggered[0].id).toBe('open_requested');
@@ -75,86 +65,48 @@ describe('VirtualGarageDoorDevice', () => {
       await device.onInit();
       await device.setReportedState('open');
 
-      await externalSet(device, 'garagedoor_closed', true);
+      await requestViaCapability(device, 'garagedoor_closed', true);
 
       expect(device._triggered.map(t => t.id)).toEqual(['close_requested']);
+    });
+
+    test('a request is rejected with an explanatory message so the value is never committed', async () => {
+      const device = createDevice();
+      await device.onInit();
+
+      const openResult = await requestViaCapability(device, 'garagedoor_closed', false);
+      expect(openResult).toEqual({ rejected: true, message: 'i18n:request.open' });
+      expect(device._caps.garagedoor_closed).toBe(true);
+
+      await device.setReportedState('open');
+      const closeResult = await requestViaCapability(device, 'garagedoor_closed', true);
+      expect(closeResult).toEqual({ rejected: true, message: 'i18n:request.close' });
+      expect(device._caps.garagedoor_closed).toBe(false);
     });
 
     test('a request never touches the garagedoor_state capability or the store', async () => {
       const device = createDevice();
       await device.onInit();
 
-      await externalSet(device, 'garagedoor_closed', false);
+      await requestViaCapability(device, 'garagedoor_closed', false);
 
       expect(device._caps.garagedoor_state).toBe('closed');
       expect(device._store.reportedState).toBe('closed');
     });
+  });
 
-    test('an unconfirmed request reverts to the last reported state after the revert window', async () => {
+  describe('requests through the request action cards', () => {
+    test('requestState fires the matching trigger without touching any state', async () => {
       const device = createDevice();
       await device.onInit();
 
-      await externalSet(device, 'garagedoor_closed', false);
-      // Homey Core has stored the optimistic value at this point
-      expect(device._caps.garagedoor_closed).toBe(false);
+      device.requestState('open');
+      device.requestState('close');
 
-      await jest.advanceTimersByTimeAsync(AFTER_REVERT_WINDOW);
-
+      expect(device._triggered.map(t => t.id)).toEqual(['open_requested', 'close_requested']);
       expect(device._caps.garagedoor_closed).toBe(true);
       expect(device._caps.garagedoor_state).toBe('closed');
-    });
-
-    test('an unconfirmed close request reverts to open when open was last reported', async () => {
-      const device = createDevice();
-      await device.onInit();
-      await device.setReportedState('open');
-
-      await externalSet(device, 'garagedoor_closed', true);
-      await jest.advanceTimersByTimeAsync(AFTER_REVERT_WINDOW);
-
-      expect(device._caps.garagedoor_closed).toBe(false);
-      expect(device._caps.garagedoor_state).toBe('open');
-    });
-
-    test('a request confirmed by a report within the window is not reverted', async () => {
-      const device = createDevice();
-      await device.onInit();
-
-      await externalSet(device, 'garagedoor_closed', false);
-      await device.setReportedState('opening');
-      await jest.advanceTimersByTimeAsync(AFTER_REVERT_WINDOW);
-
-      expect(device._caps.garagedoor_closed).toBe(false);
-      expect(device._caps.garagedoor_state).toBe('opening');
-    });
-
-    test('rapid repeated requests followed by a report keep the reported state', async () => {
-      const device = createDevice();
-      await device.onInit();
-
-      await externalSet(device, 'garagedoor_closed', false);
-      await jest.advanceTimersByTimeAsync(100);
-      await externalSet(device, 'garagedoor_closed', false);
-      await device.setReportedState('opening');
-      await jest.advanceTimersByTimeAsync(AFTER_REVERT_WINDOW * 2);
-
-      expect(device._caps.garagedoor_closed).toBe(false);
-      expect(device._caps.garagedoor_state).toBe('opening');
-      expect(device._triggered.map(t => t.id)).toEqual(['open_requested', 'open_requested']);
-    });
-
-    test('a report arriving during the revert window of an opposite request wins', async () => {
-      const device = createDevice();
-      await device.onInit();
-      await device.setReportedState('open');
-
-      // Close is requested and the sensor confirms closed almost immediately
-      await externalSet(device, 'garagedoor_closed', true);
-      await device.setReportedState('closed');
-      await jest.advanceTimersByTimeAsync(AFTER_REVERT_WINDOW);
-
-      expect(device._caps.garagedoor_closed).toBe(true);
-      expect(device._caps.garagedoor_state).toBe('closed');
+      expect(device._store.reportedState).toBe('closed');
     });
   });
 
@@ -202,7 +154,9 @@ describe('VirtualGarageDoorDevice', () => {
     const device = createDevice();
     await device.onInit();
 
-    await externalSet(device, 'garagedoor_closed', false);
+    await requestViaCapability(device, 'garagedoor_closed', false);
+    expect(device._caps.garagedoor_closed).toBe(true); // request alone changes nothing
+
     await device.setReportedState('opening');
     expect(device._caps.garagedoor_closed).toBe(false);
     expect(device._caps.garagedoor_state).toBe('opening');
@@ -210,14 +164,13 @@ describe('VirtualGarageDoorDevice', () => {
     await device.setReportedState('open');
     expect(device._caps.garagedoor_state).toBe('open');
 
-    await externalSet(device, 'garagedoor_closed', true);
+    await requestViaCapability(device, 'garagedoor_closed', true);
+    expect(device._caps.garagedoor_closed).toBe(false); // still open until reported
+
     await device.setReportedState('closing');
-    expect(device._caps.garagedoor_closed).toBe(false);
     expect(device._caps.garagedoor_state).toBe('closing');
 
     await device.setReportedState('closed');
-    await jest.advanceTimersByTimeAsync(AFTER_REVERT_WINDOW * 2);
-
     expect(device._caps.garagedoor_closed).toBe(true);
     expect(device._caps.garagedoor_state).toBe('closed');
     expect(device._triggered.map(t => t.id)).toEqual(['open_requested', 'close_requested']);

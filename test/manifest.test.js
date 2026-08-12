@@ -47,18 +47,30 @@ describe('app manifest', () => {
     expect(driver.pair[0].navigation).toEqual({ next: 'add_devices' });
   });
 
-  test('request triggers exist and are scoped to this driver', () => {
+  test('flow cards exist and are scoped to this driver', () => {
     const triggers = manifest.flow.triggers.map(t => t.id).sort();
-    expect(triggers).toEqual(['close_requested', 'open_requested']);
+    expect(triggers).toEqual(['close_requested', 'garagedoor_state_changed', 'open_requested']);
 
-    for (const trigger of manifest.flow.triggers) {
-      const deviceArg = trigger.args.find(arg => arg.type === 'device');
+    const actions = manifest.flow.actions.map(a => a.id).sort();
+    expect(actions).toEqual(['request_close', 'request_open', 'set_state']);
+
+    for (const card of [...manifest.flow.triggers, ...manifest.flow.actions]) {
+      const deviceArg = card.args.find(arg => arg.type === 'device');
       expect(deviceArg).toEqual({
         type: 'device',
         name: 'device',
         filter: 'driver_id=garagedoor',
       });
     }
+  });
+
+  test('the state-changed trigger exposes the capability value as a token', () => {
+    const trigger = manifest.flow.triggers.find(t => t.id === 'garagedoor_state_changed');
+    // Homey fires `<capability id>_changed` automatically on setCapabilityValue;
+    // the token must be named after the capability for the value to be attached.
+    expect(trigger.tokens).toHaveLength(1);
+    expect(trigger.tokens[0].name).toBe('garagedoor_state');
+    expect(trigger.tokens[0].type).toBe('string');
   });
 
   test('the set_state action offers exactly the states the device accepts', () => {
@@ -68,9 +80,12 @@ describe('app manifest', () => {
     const stateArg = action.args.find(arg => arg.name === 'state');
     expect(stateArg.type).toBe('dropdown');
     expect(stateArg.values.map(v => v.id)).toEqual(STATES);
-
-    const deviceArg = action.args.find(arg => arg.type === 'device');
-    expect(deviceArg.filter).toBe('driver_id=garagedoor');
+    // dropdown values must use `title` (i18n object), not the SDK2-era `label`
+    for (const value of stateArg.values) {
+      expect(value.title).toBeDefined();
+      expect(value.title.en).toEqual(expect.any(String));
+      expect(value.label).toBeUndefined();
+    }
   });
 
   test('the garagedoor_state capability enumerates exactly the states the device accepts', () => {

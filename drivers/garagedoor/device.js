@@ -4,29 +4,18 @@ const Homey = require('homey');
 
 const STATES = ['closed', 'opening', 'open', 'closing'];
 
-// How long after a request Homey's optimistic capability update is allowed to
-// linger before it is reverted to the last reported state. Homey stores the
-// requested value as soon as the capability listener resolves; this device
-// only accepts state changes that were explicitly reported by a Flow.
-const REQUEST_REVERT_MS = 500;
-
 module.exports = class VirtualGarageDoorDevice extends Homey.Device {
 
   static STATES = STATES;
-  static REQUEST_REVERT_MS = REQUEST_REVERT_MS;
 
   async onInit() {
-    // Monotonic counter of received state reports, used to discard the
-    // scheduled revert of an optimistic update once a real report arrives.
-    this._reportSeq = 0;
-
     if (!this.hasCapability('garagedoor_state')) {
       await this.addCapability('garagedoor_state');
     }
 
-    // Restore the last *reported* state. Capability values persist across
-    // restarts, but the store value is only ever written by the report path,
-    // so it cannot contain a half-applied request.
+    // Restore the last *reported* state. The store value is only ever
+    // written by the report path; the capability values are projections
+    // of it, so a restart can never resurrect an unconfirmed request.
     let state = this.getStoreValue('reportedState');
     if (!STATES.includes(state)) {
       state = this.getCapabilityValue('garagedoor_closed') === false ? 'open' : 'closed';
@@ -41,22 +30,30 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
   }
 
   /**
-   * A set on `garagedoor_closed` (Homey app, Apple Home via HomeKitty, or a
-   * standard Flow action card) is treated as a *request*, never as a state
-   * change: emit the matching Flow trigger and restore the last reported
-   * state shortly after, unless a Flow reported the actual state meanwhile.
+   * A set on `garagedoor_closed` (the device tile in the Homey app, Apple
+   * Home via HomeKitty, or the built-in Open/Close/Toggle Flow cards) is
+   * treated as a *request*, never as a state change: emit the matching Flow
+   * trigger, then reject so Homey does not commit the unconfirmed value.
+   *
+   * The rejection is deliberate. HomeKitty swallows it and keeps HomeKit's
+   * target state, so Apple Home shows "Opening…"/"Closing…" until a Flow
+   * reports the actual state; the Homey app shows the rejection message,
+   * which tells the user the request was handed to their Flows.
    */
   async _onGaragedoorClosedRequested(value) {
-    const trigger = value ? this._closeRequestedTrigger : this._openRequestedTrigger;
-    trigger.trigger(this).catch(this.error);
-    this.log(`${value ? 'close' : 'open'} requested`);
+    const kind = value ? 'close' : 'open';
+    this.requestState(kind);
+    throw new Error(this.homey.__(`request.${kind}`));
+  }
 
-    const seq = this._reportSeq;
-    this.homey.setTimeout(() => {
-      if (this._reportSeq !== seq) return; // a real report came in, keep it
-      const reported = this.getStoreValue('reportedState');
-      this.setCapabilityValue('garagedoor_closed', reported === 'closed').catch(this.error);
-    }, REQUEST_REVERT_MS);
+  /**
+   * Emit an open/close request to the user's Flows. Used by the capability
+   * listener above and by the "Request to open/close" Flow action cards.
+   */
+  requestState(kind) {
+    const trigger = kind === 'close' ? this._closeRequestedTrigger : this._openRequestedTrigger;
+    trigger.trigger(this).catch(this.error);
+    this.log(`${kind} requested`);
   }
 
   /**
@@ -67,7 +64,6 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
     if (!STATES.includes(state)) {
       throw new Error(`Unknown garage door state: ${state}`);
     }
-    this._reportSeq += 1;
     await this.setStoreValue('reportedState', state);
     await this._applyReportedState(state);
     this.log(`state reported as ${state}`);

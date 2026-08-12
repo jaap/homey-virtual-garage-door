@@ -39,8 +39,7 @@ function createDevice({ store = {}, capabilities = {} } = {}) {
   });
 
   device.homey = {
-    // Evaluated at call time, so Jest fake timers apply.
-    setTimeout: (fn, ms) => setTimeout(fn, ms),
+    __: jest.fn(key => `i18n:${key}`),
     flow: {
       getDeviceTriggerCard: jest.fn(id => ({
         trigger: jest.fn(async triggeredDevice => {
@@ -55,18 +54,24 @@ function createDevice({ store = {}, capabilities = {} } = {}) {
 
 /**
  * Simulate an external capability set request (Homey app UI, HomeKitty via
- * the Homey API, or a standard Flow action card): Homey Core invokes the
- * registered capability listener and, when it resolves, stores the requested
- * value as the capability value.
+ * the Homey API, or a built-in capability Flow card): Homey Core invokes the
+ * registered capability listener; when it resolves the requested value is
+ * committed, when it rejects the value is left unchanged and the error is
+ * shown to the requester. Returns `{ rejected, message }`.
  */
-async function externalSet(device, capabilityId, value) {
-  await device._listeners[capabilityId](value, {});
-  device._caps[capabilityId] = value; // Homey Core's optimistic update on resolve
+async function requestViaCapability(device, capabilityId, value) {
+  try {
+    await device._listeners[capabilityId](value, {});
+  } catch (err) {
+    return { rejected: true, message: err.message };
+  }
+  device._caps[capabilityId] = value; // Homey Core commits the value on resolve
+  return { rejected: false };
 }
 
 /**
- * Build a VirtualGarageDoorDriver with a mocked Homey SDK surface. The
- * `set_state` action card mock is exposed as `driver._actionCard`.
+ * Build a VirtualGarageDoorDriver with a mocked Homey SDK surface. Action
+ * card mocks are exposed per card id via `driver._actionCards`.
  */
 function createDriver() {
   const driver = new VirtualGarageDoorDriver();
@@ -74,16 +79,19 @@ function createDriver() {
   driver.log = jest.fn();
   driver.error = jest.fn();
 
-  const actionCard = { registerRunListener: jest.fn() };
-  driver._actionCard = actionCard;
+  const actionCards = {};
+  driver._actionCards = actionCards;
   driver.homey = {
     __: jest.fn(key => `i18n:${key}`),
     flow: {
-      getActionCard: jest.fn(() => actionCard),
+      getActionCard: jest.fn(id => {
+        actionCards[id] = actionCards[id] || { registerRunListener: jest.fn() };
+        return actionCards[id];
+      }),
     },
   };
 
   return driver;
 }
 
-module.exports = { createDevice, createDriver, externalSet };
+module.exports = { createDevice, createDriver, requestViaCapability };

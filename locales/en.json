@@ -1,5 +1,9 @@
 {
   "pair": {
     "defaultName": "Virtual Garage Door"
+  },
+  "request": {
+    "open": "Open requested — waiting for a Flow to report the actual state.",
+    "close": "Close requested — waiting for a Flow to report the actual state."
   }
 }

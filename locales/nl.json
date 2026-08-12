@@ -1,5 +1,9 @@
 {
   "pair": {
     "defaultName": "Virtuele garagedeur"
+  },
+  "request": {
+    "open": "Openen gevraagd — wacht tot een Flow de werkelijke status rapporteert.",
+    "close": "Sluiten gevraagd — wacht tot een Flow de werkelijke status rapporteert."
   }
 }

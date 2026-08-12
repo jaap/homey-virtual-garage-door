@@ -1,6 +1,6 @@
 # Virtual Garage Door for Homey
 
-A Homey Pro app that provides a generic **virtual garage door** device, so that arbitrary existing Homey devices and Advanced Flows can be composed into a proper `garagedoor` device — one that HomeKit bridges such as [HomeKitty](https://homey.app/a/it.robertklep.homekitty/) expose to Apple Home as a real garage door accessory.
+A Homey Pro app that provides a generic **virtual garage door** device, so that arbitrary existing Homey devices and Advanced Flows can be composed into a proper `garagedoor` device — one that HomeKit bridges such as [HomeKitty](https://github.com/robertklep/name.klep.homekitty) expose to Apple Home as a real garage door accessory.
 
 The app has **no knowledge of your hardware**. All communication between the virtual garage door and the physical world happens through Homey Flow cards:
 
@@ -25,7 +25,9 @@ A request to open the garage does **not** mean the garage is open.
 * When Apple Home, the Homey app, or a Flow asks the door to open or close, the device only emits a Flow trigger (**"Open was requested"** / **"Close was requested"**). Its state does not change.
 * The state of the virtual garage door only changes when your Flow explicitly reports it back with the **"Report the door state"** action card (Closed / Opening / Open / Closing).
 
-This keeps all safety logic and hardware interpretation visible and configurable in your Advanced Flows:
+Technically, the device *rejects* every direct write to its `garagedoor_closed` capability after emitting the request trigger, so Homey never commits a state that no sensor confirmed. In the Homey app this shows up as a short message when you tap the tile ("Open requested — waiting for a Flow to report the actual state") — that is by design, and it is exactly what makes Apple Home behave correctly (see the HomeKitty section).
+
+All safety logic and hardware interpretation stays visible and configurable in your Advanced Flows:
 
 ```text
 Apple Home requests OPEN
@@ -41,18 +43,16 @@ Physical sensor eventually confirms position
 Advanced Flow reports OPEN
 ```
 
-If no Flow reports anything back, the device simply returns to its last reported state a moment after the request. The app never operates hardware and never guesses.
-
 ## Device model
 
 Each Virtual Garage Door device is a standard Homey `garagedoor`-class device with:
 
 | Capability | Type | Role |
 |---|---|---|
-| `garagedoor_closed` | boolean (standard Homey capability) | The device's main control and the last **reported** closed-state. Setting it (from the Homey app, Apple Home, or the standard "Close/Open the garage door" Flow action) is treated as a *request*. |
+| `garagedoor_closed` | boolean (standard Homey capability, `true` = closed) | The device's main control and the last **reported** closed-state. Any attempt to set it (device tile, Apple Home, built-in Flow cards) is converted into a *request trigger* and rejected. |
 | `garagedoor_state` | enum: `closed`, `opening`, `open`, `closing` (custom, read-only sensor) | The full last **reported** state, visible on the device and usable in Flows. |
 
-There is no standard Homey capability for garage-door travel state (opening/closing), so the read-only `garagedoor_state` enum is the one custom capability this app defines. `garagedoor_closed` remains the single source of truth for every integration that consumes standard capabilities (HomeKitty included); `garagedoor_state` is derived information for you and your Flows.
+There is no standard Homey capability for garage-door travel state — `garagedoor_closed` is the only `garagedoor_*` capability among Homey's 184 standard capabilities, and nothing standard models opening/closing for doors (`windowcoverings_state`'s `up`/`idle`/`down` cannot distinguish *open* from *closed* when idle). The read-only `garagedoor_state` enum is therefore the one custom capability this app defines. `garagedoor_closed` remains the single source of truth for every integration that consumes standard capabilities (HomeKitty included); `garagedoor_state` is derived information for you and your Flows.
 
 ## Flow cards
 
@@ -60,12 +60,18 @@ There is no standard Homey capability for garage-door travel state (opening/clos
 
 * **Open was requested** — someone or something asked the door to open.
 * **Close was requested** — someone or something asked the door to close.
+* **The door state changed** — a Flow reported a new state; the `State` tag contains `closed`, `opening`, `open` or `closing`.
 
 **Actions (THEN):**
 
 * **Report the door state as [Closed / Opening / Open / Closing]** — tell the device what is actually happening. This is the only way its state changes.
+* **Request to open** / **Request to close** — emit the same request triggers that Apple Home or the device tile would, without an error result. Use these when another Flow wants to operate the door.
 
-The standard Homey cards for the `garagedoor_closed` capability (e.g. the built-in *Close/Open the garage door* action) act as another way to *request* movement — they run through the same request path and never change the reported state directly.
+**Built-in cards you get for free** (Homey generates them for every device with `garagedoor_closed`):
+
+* Triggers: *Closed* / *Opened* — fire when the **reported** state changes.
+* Condition: *Is closed / open* — checks the **reported** state.
+* Actions: *Close* / *Open* / *Toggle* — these go through the same request path; they work, but the card will report the "waiting for a Flow" message as an error, because the app refuses to change state without a report. In Flows, prefer **Request to open/close**.
 
 ## Example: single closed-sensor setup (Shelly relay + Aqara contact sensor)
 
@@ -91,15 +97,38 @@ THEN  (if you did not just request anything: someone used the wall button / remo
       Virtual Garage Door: Report the door state as Opening or Open — your call
 ```
 
+If a request should be **denied** (a safety condition failed), report the current state again — that snaps Apple Home out of its "Opening…"/"Closing…" display.
+
 Later, if you add a second (fully-open) sensor, only your Flows change — the virtual device stays exactly the same.
 
 ## HomeKitty / Apple Home
 
-*(See the "HomeKitty compatibility" section below for the exact mapping details.)*
+Verified against HomeKitty 2.5.8 (app id `name.klep.homekitty`, actively maintained). What HomeKitty expects, from [`lib/maps/garagedoor.js`](https://github.com/robertklep/name.klep.homekitty/blob/main/lib/maps/garagedoor.js):
+
+* A device with **class `garagedoor`** (or virtual class) and a UI-visible **`garagedoor_closed`** capability — exactly what this app provides. Extra capabilities are ignored by the mapper, so the custom `garagedoor_state` sensor is invisible to HomeKit and cannot break the mapping.
+* The device is exposed as a HomeKit **GarageDoorOpener** service. Both `CurrentDoorState` and `TargetDoorState` are derived from the one boolean: `true` → Closed, `false` → Open. A HomeKit *Open/Close* command writes `TargetDoorState`, which HomeKitty translates into `setCapabilityValue('garagedoor_closed', …)` on our device — invoking our capability listener, i.e. the request path.
+* HomeKitty never sets the HomeKit `OPENING`/`CLOSING`/`STOPPED` states itself, and both characteristics move together whenever the capability changes on the Homey side.
+
+How the pieces interact, and why this app rejects direct writes:
+
+1. You tap **Open** in Apple Home. HomeKit stores `TargetDoorState = Open` while `CurrentDoorState` is still Closed, so Apple Home shows **"Opening…"** (Apple renders this whenever target ≠ current).
+2. HomeKitty calls `setCapabilityValue('garagedoor_closed', false)`. Our device fires **Open was requested** and rejects the write; HomeKitty deliberately swallows the rejection. Because the capability did not change, no update reaches HomeKit — target stays Open, current stays Closed, and "Opening…" keeps showing. (If the app committed the value instead, HomeKitty would immediately move *both* characteristics and Apple Home would claim the door is open the instant you asked.)
+3. Your Flow pulses the relay and reports **Opening** → `garagedoor_closed` stays `false`… and eventually reports **Open**. The capability change reaches HomeKitty, both characteristics become Open, and Apple Home settles on "Open".
+4. Closing mirrors this with "Closing…" until your Flow reports **Closed**.
+
+Known limitations of the stock mapping (inherent to `garagedoor_closed` being one boolean):
+
+* "Opening…"/"Closing…" only appears for **HomeKit-initiated** actions. When the door is operated from the Homey side (wall button, Flow), Apple Home jumps straight between Closed and Open at the moment your Flow reports it.
+* Because `opening`/`closing` map to `false` (not closed), Apple Home shows "Open" during a report-driven transition rather than a moving state — honest, just less pretty.
+* If your Flow denies a request and reports nothing, Apple Home can keep showing "Opening…" until the next actual state change. Have the Flow re-report the current state to settle it.
+* HomeKitty caches a HomeKit-written target value internally, so an explicit Home-app refresh during a pending request may briefly read the target instead of the actual state; the next report corrects it.
+* Keep the device's capability set stable: HomeKitty removes and re-adds the accessory when a device's capabilities change, which resets its HomeKit room/automation assignments.
+
+ObstructionDetected: HomeKitty's mapping optionally wires it to an `alarm_generic` capability. This app does not include it in v0.1 (it would show a permanent alarm sensor on the device for a state nothing reports yet); it is a candidate for a future version — with the accessory-reset caveat above in mind.
 
 ## Persistence
 
-The reported state survives app restarts and Homey reboots. On startup the device restores the **last reported state** — it does not verify the physical door and it never emits open/close requests by itself. If your hardware may have moved while Homey was down, let your Flows report the state again (e.g. a Flow triggered by the sensor, or a periodic sync Flow).
+The reported state survives app restarts and Homey reboots. On startup the device restores the **last reported state** — it does not verify the physical door and it never emits open/close requests by itself. Because requests are rejected rather than committed, a restart can never resurrect an unconfirmed request either. If your hardware may have moved while Homey was down, let your Flows report the state again (e.g. a Flow triggered by the sensor, or a periodic sync Flow).
 
 ## Pairing
 
@@ -113,14 +142,14 @@ Install with the [Homey CLI](https://apps.developer.homey.app/the-basics/getting
 
 ```sh
 npm install --global homey   # the Homey CLI
-npm install                  # dev dependencies; also unpacks the PNG images
+npm install                  # dev dependencies; also generates the PNG images
 homey login
 homey app install
 ```
 
 > The PNG images referenced by the app manifest are generated deterministically
-> from `scripts/generate-images.js` (Node built-ins only) by `npm install` (the
-> `prepare` script), so the repository itself stays text-only.
+> by `scripts/generate-images.js` (Node built-ins only) when you run
+> `npm install` (the `prepare` script), so the repository itself stays text-only.
 
 ## Development
 
@@ -130,7 +159,7 @@ npm test           # unit tests
 npm run validate   # homey app validate --level publish (requires the Homey CLI)
 ```
 
-The tests mock the `homey` runtime module (`test/mocks/homey.js`) and simulate Homey Core's contract for capability listeners — the requested value is stored once the listener resolves — so the request/report state machine is exercised exactly as it behaves on a real Homey. `test/manifest.test.js` additionally guards against drift between the compose files and the code (for example a Flow dropdown state the device would reject).
+The tests mock the `homey` runtime module (`test/mocks/homey.js`) and simulate Homey Core's contract for capability listeners — commit on resolve, discard on reject — so the request/report state machine is exercised exactly as it behaves on a real Homey. `test/manifest.test.js` additionally guards against drift between the compose files and the code (for example a Flow dropdown state the device would reject).
 
 ## Safety
 
