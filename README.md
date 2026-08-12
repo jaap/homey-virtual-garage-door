@@ -117,6 +117,16 @@ homey login
 homey app install
 ```
 
+## Development
+
+```sh
+npm install        # dev dependencies (Jest)
+npm test           # unit tests
+npm run validate   # homey app validate --level publish (requires the Homey CLI)
+```
+
+The tests mock the `homey` runtime module (`test/mocks/homey.js`) and simulate Homey Core's contract for capability listeners — the requested value is stored once the listener resolves — so the request/report state machine is exercised exactly as it behaves on a real Homey. `test/manifest.test.js` additionally guards against drift between the compose files and the code (for example a Flow dropdown state the device would reject).
+
 ## Safety
 
 This app never autonomously operates physical hardware. It only:

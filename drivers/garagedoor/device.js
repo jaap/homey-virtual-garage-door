@@ -12,6 +12,9 @@ const REQUEST_REVERT_MS = 500;
 
 module.exports = class VirtualGarageDoorDevice extends Homey.Device {
 
+  static STATES = STATES;
+  static REQUEST_REVERT_MS = REQUEST_REVERT_MS;
+
   async onInit() {
     // Monotonic counter of received state reports, used to discard the
     // scheduled revert of an optimistic update once a real report arrives.

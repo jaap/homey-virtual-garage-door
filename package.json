@@ -4,7 +4,11 @@
   "description": "Turn Homey Flows into a proper virtual garage door device",
   "main": "app.js",
   "license": "MIT",
+  "scripts": {
+    "test": "jest",
+    "validate": "homey app validate --level publish"
+  },
   "devDependencies": {
-    "homey": "^3.0.0"
+    "jest": "^30.4.2"
   }
 }
