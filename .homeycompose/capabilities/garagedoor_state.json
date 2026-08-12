@@ -1,0 +1,45 @@
+{
+  "type": "enum",
+  "title": {
+    "en": "Door state",
+    "nl": "Deurstatus"
+  },
+  "desc": {
+    "en": "The last reported state of the garage door",
+    "nl": "De laatst gerapporteerde status van de garagedeur"
+  },
+  "values": [
+    {
+      "id": "closed",
+      "title": {
+        "en": "Closed",
+        "nl": "Gesloten"
+      }
+    },
+    {
+      "id": "opening",
+      "title": {
+        "en": "Opening",
+        "nl": "Bezig met openen"
+      }
+    },
+    {
+      "id": "open",
+      "title": {
+        "en": "Open",
+        "nl": "Open"
+      }
+    },
+    {
+      "id": "closing",
+      "title": {
+        "en": "Closing",
+        "nl": "Bezig met sluiten"
+      }
+    }
+  ],
+  "getable": true,
+  "setable": false,
+  "uiComponent": "sensor",
+  "icon": "/assets/icon.svg"
+}

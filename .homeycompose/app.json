@@ -1,0 +1,31 @@
+{
+  "id": "com.jaap.virtualgaragedoor",
+  "version": "0.1.0",
+  "compatibility": ">=5.0.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Virtual Garage Door"
+  },
+  "description": {
+    "en": "Turn Homey Flows into a proper garage door device",
+    "nl": "Maak van Homey Flows een echt garagedeur-apparaat"
+  },
+  "category": [
+    "tools"
+  ],
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "brandColor": "#2A4C9B",
+  "support": "mailto:***REMOVED***",
+  "author": {
+    "name": "Jaap",
+    "email": "***REMOVED***"
+  }
+}

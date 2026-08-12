@@ -1,0 +1,83 @@
+{
+  "triggers": [
+    {
+      "id": "open_requested",
+      "title": {
+        "en": "Open was requested",
+        "nl": "Openen werd gevraagd"
+      },
+      "hint": {
+        "en": "Triggers when someone or something (e.g. Apple Home, the Homey app or a Flow) requests this garage door to open. The reported state does not change until a Flow reports it back.",
+        "nl": "Start wanneer iets of iemand (bijv. Apple Home, de Homey app of een Flow) vraagt om deze garagedeur te openen. De gerapporteerde status verandert pas wanneer een Flow deze terugmeldt."
+      }
+    },
+    {
+      "id": "close_requested",
+      "title": {
+        "en": "Close was requested",
+        "nl": "Sluiten werd gevraagd"
+      },
+      "hint": {
+        "en": "Triggers when someone or something (e.g. Apple Home, the Homey app or a Flow) requests this garage door to close. The reported state does not change until a Flow reports it back.",
+        "nl": "Start wanneer iets of iemand (bijv. Apple Home, de Homey app of een Flow) vraagt om deze garagedeur te sluiten. De gerapporteerde status verandert pas wanneer een Flow deze terugmeldt."
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "set_state",
+      "title": {
+        "en": "Report the door state",
+        "nl": "Rapporteer de deurstatus"
+      },
+      "titleFormatted": {
+        "en": "Report the door state as [[state]]",
+        "nl": "Rapporteer de deurstatus als [[state]]"
+      },
+      "hint": {
+        "en": "Reports the actual state of the garage door, as observed by your sensors or automation. This is the only way the state of the virtual garage door changes.",
+        "nl": "Rapporteert de werkelijke status van de garagedeur, zoals waargenomen door je sensoren of automatisering. Dit is de enige manier waarop de status van de virtuele garagedeur verandert."
+      },
+      "args": [
+        {
+          "name": "state",
+          "type": "dropdown",
+          "title": {
+            "en": "State",
+            "nl": "Status"
+          },
+          "values": [
+            {
+              "id": "closed",
+              "label": {
+                "en": "Closed",
+                "nl": "Gesloten"
+              }
+            },
+            {
+              "id": "opening",
+              "label": {
+                "en": "Opening",
+                "nl": "Bezig met openen"
+              }
+            },
+            {
+              "id": "open",
+              "label": {
+                "en": "Open",
+                "nl": "Open"
+              }
+            },
+            {
+              "id": "closing",
+              "label": {
+                "en": "Closing",
+                "nl": "Bezig met sluiten"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

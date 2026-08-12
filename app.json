@@ -1,0 +1,216 @@
+{
+  "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
+  "id": "com.jaap.virtualgaragedoor",
+  "version": "0.1.0",
+  "compatibility": ">=5.0.0",
+  "sdk": 3,
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Virtual Garage Door"
+  },
+  "description": {
+    "en": "Turn Homey Flows into a proper garage door device",
+    "nl": "Maak van Homey Flows een echt garagedeur-apparaat"
+  },
+  "category": [
+    "tools"
+  ],
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "brandColor": "#2A4C9B",
+  "support": "mailto:***REMOVED***",
+  "author": {
+    "name": "Jaap",
+    "email": "***REMOVED***"
+  },
+  "flow": {
+    "triggers": [
+      {
+        "id": "open_requested",
+        "title": {
+          "en": "Open was requested",
+          "nl": "Openen werd gevraagd"
+        },
+        "hint": {
+          "en": "Triggers when someone or something (e.g. Apple Home, the Homey app or a Flow) requests this garage door to open. The reported state does not change until a Flow reports it back.",
+          "nl": "Start wanneer iets of iemand (bijv. Apple Home, de Homey app of een Flow) vraagt om deze garagedeur te openen. De gerapporteerde status verandert pas wanneer een Flow deze terugmeldt."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=garagedoor"
+          }
+        ]
+      },
+      {
+        "id": "close_requested",
+        "title": {
+          "en": "Close was requested",
+          "nl": "Sluiten werd gevraagd"
+        },
+        "hint": {
+          "en": "Triggers when someone or something (e.g. Apple Home, the Homey app or a Flow) requests this garage door to close. The reported state does not change until a Flow reports it back.",
+          "nl": "Start wanneer iets of iemand (bijv. Apple Home, de Homey app of een Flow) vraagt om deze garagedeur te sluiten. De gerapporteerde status verandert pas wanneer een Flow deze terugmeldt."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=garagedoor"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "set_state",
+        "title": {
+          "en": "Report the door state",
+          "nl": "Rapporteer de deurstatus"
+        },
+        "titleFormatted": {
+          "en": "Report the door state as [[state]]",
+          "nl": "Rapporteer de deurstatus als [[state]]"
+        },
+        "hint": {
+          "en": "Reports the actual state of the garage door, as observed by your sensors or automation. This is the only way the state of the virtual garage door changes.",
+          "nl": "Rapporteert de werkelijke status van de garagedeur, zoals waargenomen door je sensoren of automatisering. Dit is de enige manier waarop de status van de virtuele garagedeur verandert."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=garagedoor"
+          },
+          {
+            "name": "state",
+            "type": "dropdown",
+            "title": {
+              "en": "State",
+              "nl": "Status"
+            },
+            "values": [
+              {
+                "id": "closed",
+                "label": {
+                  "en": "Closed",
+                  "nl": "Gesloten"
+                }
+              },
+              {
+                "id": "opening",
+                "label": {
+                  "en": "Opening",
+                  "nl": "Bezig met openen"
+                }
+              },
+              {
+                "id": "open",
+                "label": {
+                  "en": "Open",
+                  "nl": "Open"
+                }
+              },
+              {
+                "id": "closing",
+                "label": {
+                  "en": "Closing",
+                  "nl": "Bezig met sluiten"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "drivers": [
+    {
+      "name": {
+        "en": "Virtual Garage Door"
+      },
+      "class": "garagedoor",
+      "capabilities": [
+        "garagedoor_closed",
+        "garagedoor_state"
+      ],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [],
+      "images": {
+        "small": "/drivers/garagedoor/assets/images/small.png",
+        "large": "/drivers/garagedoor/assets/images/large.png",
+        "xlarge": "/drivers/garagedoor/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "garagedoor"
+    }
+  ],
+  "capabilities": {
+    "garagedoor_state": {
+      "type": "enum",
+      "title": {
+        "en": "Door state",
+        "nl": "Deurstatus"
+      },
+      "desc": {
+        "en": "The last reported state of the garage door",
+        "nl": "De laatst gerapporteerde status van de garagedeur"
+      },
+      "values": [
+        {
+          "id": "closed",
+          "title": {
+            "en": "Closed",
+            "nl": "Gesloten"
+          }
+        },
+        {
+          "id": "opening",
+          "title": {
+            "en": "Opening",
+            "nl": "Bezig met openen"
+          }
+        },
+        {
+          "id": "open",
+          "title": {
+            "en": "Open",
+            "nl": "Open"
+          }
+        },
+        {
+          "id": "closing",
+          "title": {
+            "en": "Closing",
+            "nl": "Bezig met sluiten"
+          }
+        }
+      ],
+      "getable": true,
+      "setable": false,
+      "uiComponent": "sensor",
+      "icon": "/assets/icon.svg"
+    }
+  }
+}
