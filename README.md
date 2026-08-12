@@ -112,10 +112,15 @@ The reported state survives app restarts and Homey reboots. On startup the devic
 Install with the [Homey CLI](https://apps.developer.homey.app/the-basics/getting-started):
 
 ```sh
-npm install --global homey
+npm install --global homey   # the Homey CLI
+npm install                  # dev dependencies; also unpacks the PNG images
 homey login
 homey app install
 ```
+
+> The PNG images referenced by the app manifest are stored base64-encoded in
+> `scripts/image-assets.json` and materialized by `npm install` (the `prepare`
+> script), so the repository itself stays text-only.
 
 ## Development
 

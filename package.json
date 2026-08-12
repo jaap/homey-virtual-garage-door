@@ -5,6 +5,7 @@
   "main": "app.js",
   "license": "MIT",
   "scripts": {
+    "prepare": "node scripts/unpack-images.js",
     "test": "jest",
     "validate": "homey app validate --level publish"
   },

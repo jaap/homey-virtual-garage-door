@@ -1,6 +1,10 @@
 node_modules/
 .homeybuild/
 coverage/
+
+# generated from scripts/image-assets.json by `npm install` (prepare)
+assets/images/*.png
+drivers/*/assets/images/*.png
 env.json
 *.log
 .DS_Store
