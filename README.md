@@ -118,9 +118,9 @@ homey login
 homey app install
 ```
 
-> The PNG images referenced by the app manifest are stored base64-encoded in
-> `scripts/image-assets.json` and materialized by `npm install` (the `prepare`
-> script), so the repository itself stays text-only.
+> The PNG images referenced by the app manifest are generated deterministically
+> from `scripts/generate-images.js` (Node built-ins only) by `npm install` (the
+> `prepare` script), so the repository itself stays text-only.
 
 ## Development
 

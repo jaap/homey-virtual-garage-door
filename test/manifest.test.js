@@ -96,4 +96,18 @@ describe('app manifest', () => {
       expect(fs.existsSync(resolved)).toBe(true);
     }
   });
+
+  test.each([
+    ['app', 'images', { small: [250, 175], large: [500, 350], xlarge: [1000, 700] }],
+    ['driver', 'drivers/garagedoor images', { small: [75, 75], large: [500, 500], xlarge: [1000, 1000] }],
+  ])('generated %s images have the sizes Homey requires', (kind, _label, expected) => {
+    const images = kind === 'app' ? manifest.images : manifest.drivers[0].images;
+    for (const [size, [width, height]] of Object.entries(expected)) {
+      const buffer = fs.readFileSync(path.join(ROOT, images[size].replace(/^\//, '')));
+      // PNG signature, then IHDR: width and height as big-endian uint32
+      expect(buffer.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+      expect(buffer.readUInt32BE(16)).toBe(width);
+      expect(buffer.readUInt32BE(20)).toBe(height);
+    }
+  });
 });
