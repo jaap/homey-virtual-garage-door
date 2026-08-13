@@ -25,9 +25,8 @@
     "xlarge": "/assets/images/xlarge.png"
   },
   "brandColor": "#2E56B5",
-  "support": "mailto:***REMOVED***",
+  "support": "https://github.com/jaap/homey-virtual-garage-door/issues",
   "author": {
-    "name": "Jaap",
-    "email": "***REMOVED***"
+    "name": "Jaap"
   }
 }
