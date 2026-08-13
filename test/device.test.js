@@ -236,7 +236,7 @@ describe('VirtualGarageDoorDevice', () => {
   });
 
   describe('HomeKitty cache re-assert', () => {
-    test('a close request re-emits the sensor-anchored value shortly after', async () => {
+    test('a close request re-emits the sensor-anchored value as a real change pair', async () => {
       const device = createDevice();
       await device.onInit();
       await device.setReportedState('open');
@@ -249,8 +249,14 @@ describe('VirtualGarageDoorDevice', () => {
       reassert.cleared = true;
       reassert.fn();
       await new Promise(resolve => setImmediate(resolve));
-      // still open: the rejected write must not stick anywhere
-      expect(device.setCapabilityValue).toHaveBeenCalledWith('garagedoor_closed', false);
+      // A same-value set is not propagated to realtime subscribers, so the
+      // re-assert must hop through null to produce a genuine change pair —
+      // otherwise HomeKitty keeps serving the refused write from its cache.
+      expect(device.setCapabilityValue.mock.calls).toEqual([
+        ['garagedoor_closed', null],
+        ['garagedoor_closed', false], // still open: the rejected write must not stick anywhere
+      ]);
+      expect(device._caps.garagedoor_closed).toBe(false);
     });
 
     test('open requests schedule no re-assert, keeping the Opening… transient alive', async () => {
