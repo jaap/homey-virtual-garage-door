@@ -20,9 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      # npm install (not ci): the project intentionally has no lockfile, and
-      # the prepare script generates the manifest PNGs the tests assert on
-      - run: npm install
+      # npm ci runs the prepare script too, generating the manifest PNGs
+      - run: npm ci
       - run: npm test
 
   validate:
@@ -33,6 +32,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm install
+      - run: npm ci
       - run: npm install --global homey
       - run: homey app validate --level publish

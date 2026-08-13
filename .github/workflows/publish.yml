@@ -6,9 +6,9 @@ name: Publish to Homey App Store
 # Token from https://tools.developer.homey.app/me.
 #
 # Athom's official publish action is not used directly because its wrapper
-# runs `npm ci --ignore-scripts` (this repo intentionally has no lockfile,
-# and the prepare script must run to generate the manifest PNGs). These
-# steps use the exact same headless-publish contract the action wraps.
+# runs `npm ci --ignore-scripts`, which skips the prepare script that
+# generates the manifest PNGs. These steps use the exact same
+# headless-publish contract the action wraps, with scripts enabled.
 
 on:
   release:
@@ -33,7 +33,7 @@ jobs:
             exit 1
           fi
 
-      - run: npm install # also generates the manifest PNGs via prepare
+      - run: npm ci # also generates the manifest PNGs via prepare
       - run: npm test
       - run: npm install --global homey
       - run: homey app validate --level publish
