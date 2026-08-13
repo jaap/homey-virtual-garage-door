@@ -124,6 +124,24 @@ describe('VirtualGarageDoorDevice', () => {
 
       expect(device._triggered).toEqual([]); // Flows never hear a blocked request
       expect(device._caps.garagedoor_closed).toBe(true);
+      // the users list must be fetched fresh — homey-api's cache would keep
+      // the presence from the first lookup forever
+      expect(api.users.getUsers).toHaveBeenCalledWith({ $cache: false });
+    });
+
+    test('a blocked capability open schedules the cache re-assert for Apple Home', async () => {
+      const api = createApi({}, { users: { a: { id: 'a', present: false } } });
+      const device = createDevice({ api, settings: { only_open_when_home: true } });
+      await device.onInit();
+
+      await requestViaCapability(device, 'garagedoor_closed', false);
+
+      const reassert = device._timers.find(t => !t.cleared && t.ms === 1500);
+      expect(reassert).toBeDefined();
+      reassert.cleared = true;
+      reassert.fn();
+      await new Promise(resolve => setImmediate(resolve));
+      expect(device._caps.garagedoor_closed).toBe(true); // snapped back to closed
     });
 
     test('closing is never blocked', async () => {

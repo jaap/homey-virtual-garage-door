@@ -106,6 +106,17 @@ describe('VirtualGarageDoorDevice — Managed mode', () => {
       expect(pulseCount(control)).toBe(1);
     });
 
+    test('a refused capability open schedules the cache re-assert; an accepted one does not', async () => {
+      const { device } = createManagedDevice();
+      await device.onInit();
+
+      await requestViaCapability(device, 'garagedoor_closed', false); // accepted (opening)
+      expect(device._timers.filter(t => !t.cleared && t.ms === 1500)).toHaveLength(0);
+
+      await requestViaCapability(device, 'garagedoor_closed', false); // refused: already moving
+      expect(device._timers.filter(t => !t.cleared && t.ms === 1500)).toHaveLength(1);
+    });
+
     test('same-state requests are refused', async () => {
       const { device, control } = createManagedDevice();
       await device.onInit();
