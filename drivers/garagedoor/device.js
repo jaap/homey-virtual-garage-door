@@ -2,8 +2,16 @@
 
 const Homey = require('homey');
 const StateMachine = require('../../lib/garage-state-machine');
+const GateMachine = require('../../lib/gate-cycle-machine');
 
 const { PHASES } = StateMachine;
+
+const GATE_TIMER_SETTINGS = {
+  opening: 'gate_opening_time',
+  open: 'gate_hold_time',
+  closing: 'gate_closing_time',
+};
+const GATE_TIMER_DEFAULTS = { opening: 10, open: 30, closing: 10 };
 
 /**
  * The raw capability value that means "door is at this endpoint" before the
@@ -29,6 +37,10 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
     this._movementFailedTrigger = this.homey.flow.getDeviceTriggerCard('movement_failed');
 
     this.registerCapabilityListener('garagedoor_closed', value => this.request(value ? 'close' : 'open', { viaCapability: true }));
+    if (this.hasCapability('button')) {
+      // the always-available "kick" button on gate devices
+      this.registerCapabilityListener('button', () => this.request('open'));
+    }
 
     // devices from before Managed mode existed migrate to Flow controlled
     if (!this.getSetting('mode')) {
@@ -37,8 +49,11 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
 
     this._travelTimer = null;
     this._machineState = null;
+    this._gate = null;
 
-    if (this.isManaged()) {
+    if (this.isGate()) {
+      await this._initGate();
+    } else if (this.isManaged()) {
       await this._initManaged();
     } else {
       await this._initFlow();
@@ -57,6 +72,10 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
     return this.getSetting('mode') === 'managed';
   }
 
+  isGate() {
+    return this.getSetting('mode') === 'gate';
+  }
+
   async onSettings({ changedKeys }) {
     // re-initialize after the new settings have been committed
     if (changedKeys.some(key => ['mode', 'closed_sensor_meaning', 'open_sensor_meaning'].includes(key))) {
@@ -67,7 +86,9 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
 
   async _reinit() {
     this._teardownManaged();
-    if (this.isManaged()) {
+    if (this.isGate()) {
+      await this._initGate();
+    } else if (this.isManaged()) {
       await this._initManaged();
     } else {
       await this.unsetWarning().catch(() => {});
@@ -166,6 +187,102 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
     this._openSensorDevice = null;
     this._onApiDeviceDelete = null;
     this._machineState = null;
+    this._gate = null;
+  }
+
+  // ------------------------------------------------------------------ gate
+
+  /**
+   * Auto-closing gate: Managed mode without sensors. The whole cycle is
+   * simulated with the configured opening/hold/closing times, and a pulse
+   * always means "go up / stay up" — including as a "kick" while the cycle
+   * is running. Short times make the tile return to Closed quickly, so the
+   * gate can be triggered again right away (also from Apple Home, whose
+   * garage tile only accepts a new Open once the door reads Closed).
+   */
+  async _initGate() {
+    const control = this.getStoreValue('controlDevice');
+    if (!control) {
+      await this._initFlow();
+      await this.setWarning(this.homey.__('warning.not_configured')).catch(() => {});
+      return;
+    }
+
+    try {
+      const api = await this.homey.app.getApi();
+      this._api = api;
+      this._controlDevice = await api.devices.getDevice({ id: control.id });
+    } catch (err) {
+      this.error('failed to resolve gate control device', err);
+      await this._initFlow();
+      await this.setWarning(this.homey.__('warning.missing_device')).catch(() => {});
+      return;
+    }
+
+    this._onApiDeviceDelete = item => {
+      if (item && item.id === control.id) {
+        this.error(`configured control device ${item.id} was deleted`);
+        this.setWarning(this.homey.__('warning.missing_device')).catch(() => {});
+      }
+    };
+    this._api.devices.on('device.delete', this._onApiDeviceDelete);
+
+    // a restart outlives the short cycle: the gate has closed itself by now
+    this._gate = GateMachine.restore().state;
+    await this._applyPhase(this._gate.phase);
+    await this.unsetWarning().catch(() => {});
+
+    const times = ['opening', 'open', 'closing'].map(phase => this._gatePhaseSeconds(phase)).join('/');
+    this.setSettings({
+      managed_devices_summary: `${this._controlDevice.name} · ${times}s`,
+    }).catch(() => {});
+
+    this.log('gate mode initialized');
+  }
+
+  _gatePhaseSeconds(phase) {
+    const value = Number(this.getSetting(GATE_TIMER_SETTINGS[phase]));
+    return Number.isFinite(value) && value > 0 ? value : GATE_TIMER_DEFAULTS[phase];
+  }
+
+  _armGateTimer() {
+    this._stopTravelTimer();
+    if (!GATE_TIMER_SETTINGS[this._gate.phase]) return;
+    const ms = this._gatePhaseSeconds(this._gate.phase) * 1000;
+    this._travelTimer = this.homey.setTimeout(() => this._onGateElapsed(), ms);
+  }
+
+  _onGateElapsed() {
+    this._travelTimer = null;
+    if (!this._gate) return;
+    const { state, effects } = GateMachine.elapsed(this._gate);
+    this._gate = state;
+    if (effects.includes('timer-start')) this._armGateTimer();
+    this._applyPhase(state.phase).catch(this.error);
+  }
+
+  async _gatePulse() {
+    if (!this._gate) {
+      throw new Error(this.homey.__('request.not_configured'));
+    }
+    const { state, effects } = GateMachine.pulse(this._gate);
+    this._gate = state;
+
+    let pulseError = null;
+    if (effects.includes('pulse')) {
+      try {
+        await this._pulse();
+      } catch (err) {
+        this.error('pulse failed', err);
+        pulseError = err;
+      }
+    }
+    if (effects.includes('timer-start')) this._armGateTimer();
+    await this._applyPhase(state.phase);
+
+    if (pulseError) {
+      throw new Error(this.homey.__('request.control_failed'));
+    }
   }
 
   _sensorRaw(which) {
@@ -280,6 +397,17 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
     trigger.trigger(this).catch(this.error);
     this.log(`${direction} requested${viaCapability ? ' (via capability)' : ''}`);
 
+    if (this.isGate()) {
+      if (direction === 'close') {
+        // the gate has no close command at all — it closes by itself
+        throw new Error(this.homey.__('request.gate_auto_close'));
+      }
+      // resolving is safe here: the committed capability value (not closed)
+      // matches the opening/open projection, so no rejection is needed and
+      // the Homey app shows no error toast for a plain gate trigger
+      return this._gatePulse();
+    }
+
     if (!this.isManaged()) {
       if (viaCapability) throw new Error(this.homey.__(`request.${direction}`));
       return;
@@ -320,7 +448,10 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
     if (!PHASES.includes(state)) {
       throw new Error(`Unknown garage door state: ${state}`);
     }
-    if (this.isManaged() && this._machineState) {
+    if (this.isGate() && this._gate) {
+      this._stopTravelTimer();
+      this._gate = { phase: GateMachine.PHASES.includes(state) ? state : 'closed' };
+    } else if (this.isManaged() && this._machineState) {
       const result = StateMachine.force(this._machineState, state);
       this._machineState = result.state;
       await this._runEffects(result.effects);
@@ -339,18 +470,34 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
 
   getManagedConfig() {
     return {
+      mode: this.getSetting('mode'),
       controlDevice: this.getStoreValue('controlDevice'),
       closedSensor: this.getStoreValue('closedSensor'),
       openSensor: this.getStoreValue('openSensor'),
       travelTime: Number(this.getSetting('travel_time')) || 20,
       closedSensorMeaning: this.getSetting('closed_sensor_meaning') || 'default',
       openSensorMeaning: this.getSetting('open_sensor_meaning') || 'default',
+      gateOpeningTime: this._gatePhaseSeconds('opening'),
+      gateHoldTime: this._gatePhaseSeconds('open'),
+      gateClosingTime: this._gatePhaseSeconds('closing'),
     };
   }
 
   async applyManagedConfig(config) {
     this._teardownManaged();
     await this.setStoreValue('controlDevice', config.controlDevice);
+    if (config.mode === 'gate') {
+      await this.setStoreValue('closedSensor', null);
+      await this.setStoreValue('openSensor', null);
+      await this.setSettings({
+        mode: 'gate',
+        gate_opening_time: config.gateOpeningTime,
+        gate_hold_time: config.gateHoldTime,
+        gate_closing_time: config.gateClosingTime,
+      });
+      await this._initGate();
+      return;
+    }
     await this.setStoreValue('closedSensor', config.closedSensor);
     await this.setStoreValue('openSensor', config.openSensor || null);
     await this.setSettings({

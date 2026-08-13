@@ -19,6 +19,11 @@
     <p data-i18n="pair.mode.managedDesc">Pick the relay that triggers your door and the sensor that detects it is closed. The app operates the door and tracks its state itself.</p>
   </button>
 
+  <button class="vgd-option" id="vgd-gate" type="button">
+    <h3 data-i18n="pair.mode.gateTitle">Auto-closing gate — timer only</h3>
+    <p data-i18n="pair.mode.gateDesc">For shared entrance gates that open on a pulse and close again by themselves. No sensors: the app animates the cycle on timers, and every trigger simply means "open / stay open".</p>
+  </button>
+
   <button class="vgd-option" id="vgd-flow" type="button">
     <h3 data-i18n="pair.mode.flowTitle">Flow controlled</h3>
     <p data-i18n="pair.mode.flowDesc">Your own Advanced Flows respond to open/close requests, operate the hardware and report the door state back. Maximum control.</p>
@@ -45,6 +50,9 @@
     });
     document.getElementById('vgd-managed').addEventListener('click', function chooseManaged() {
       Homey.showView('managed_config');
+    });
+    document.getElementById('vgd-gate').addEventListener('click', function chooseGate() {
+      Homey.showView('gate_config');
     });
   })();
 </script>

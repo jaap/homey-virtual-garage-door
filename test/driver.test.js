@@ -13,6 +13,13 @@ const VALID_CONFIG = {
   travelTime: 18,
 };
 
+const VALID_GATE_CONFIG = {
+  controlDevice: { id: 'relay-1' },
+  gateOpeningTime: 3,
+  gateHoldTime: 3,
+  gateClosingTime: 1,
+};
+
 describe('VirtualGarageDoorDriver', () => {
   test('registers run listeners for all three action cards', async () => {
     const driver = createDriver();
@@ -58,6 +65,7 @@ describe('VirtualGarageDoorDriver', () => {
       const [device] = await session.handlers.list_devices();
       expect(device.name).toBe('i18n:pair.defaultName');
       expect(device.data.id).toMatch(UUID_RE);
+      expect(device.capabilities).toEqual(['garagedoor_closed', 'garagedoor_state']); // no gate button
       expect(device.settings).toBeUndefined();
       expect(device.store).toBeUndefined();
     });
@@ -79,6 +87,29 @@ describe('VirtualGarageDoorDriver', () => {
       expect(device.store).toEqual({
         controlDevice: { id: 'relay-1', capability: 'onoff' },
         closedSensor: { id: 'sensor-1', capability: 'alarm_contact' },
+        openSensor: null,
+      });
+    });
+
+    test('with gate configuration, the new device gains the kick button and timing settings', async () => {
+      const driver = createDriver();
+      const session = createPairSession();
+      await driver.onPair(session);
+
+      await session.handlers.set_gate_config(VALID_GATE_CONFIG);
+      const [device] = await session.handlers.list_devices();
+
+      expect(device.capabilities).toEqual(['garagedoor_closed', 'garagedoor_state', 'button']);
+      expect(device.capabilitiesOptions.button.title.en).toBe('Open / keep open');
+      expect(device.settings).toEqual({
+        mode: 'gate',
+        gate_opening_time: 3,
+        gate_hold_time: 3,
+        gate_closing_time: 1,
+      });
+      expect(device.store).toEqual({
+        controlDevice: { id: 'relay-1', capability: 'onoff' },
+        closedSensor: null,
         openSensor: null,
       });
     });
@@ -143,6 +174,28 @@ describe('VirtualGarageDoorDriver', () => {
     });
   });
 
+  describe('validateGateConfig', () => {
+    test('accepts a valid configuration, including the quick-reset trick values', () => {
+      const driver = createDriver();
+      const result = driver.validateGateConfig({ ...VALID_GATE_CONFIG, gateOpeningTime: '3' });
+      expect(result).toEqual({
+        mode: 'gate',
+        controlDevice: { id: 'relay-1', capability: 'onoff' },
+        gateOpeningTime: 3,
+        gateHoldTime: 3,
+        gateClosingTime: 1,
+      });
+    });
+
+    test('rejects a missing control device and out-of-range times', () => {
+      const driver = createDriver();
+      expect(() => driver.validateGateConfig({ ...VALID_GATE_CONFIG, controlDevice: null })).toThrow(/control device/);
+      expect(() => driver.validateGateConfig({ ...VALID_GATE_CONFIG, gateOpeningTime: 0 })).toThrow(/Opening time/);
+      expect(() => driver.validateGateConfig({ ...VALID_GATE_CONFIG, gateHoldTime: 9999 })).toThrow(/Open time/);
+      expect(() => driver.validateGateConfig({ ...VALID_GATE_CONFIG, gateClosingTime: 'x' })).toThrow(/Closing time/);
+    });
+  });
+
   describe('repair', () => {
     test('exposes the current configuration and applies a validated new one', async () => {
       const driver = createDriver();
@@ -157,8 +210,27 @@ describe('VirtualGarageDoorDriver', () => {
 
       await session.handlers.set_managed_config(VALID_CONFIG);
       expect(device.applyManagedConfig).toHaveBeenCalledWith(expect.objectContaining({
+        mode: 'managed',
         controlDevice: { id: 'relay-1', capability: 'onoff' },
         travelTime: 18,
+      }));
+    });
+
+    test('a gate-mode payload routes through gate validation', async () => {
+      const driver = createDriver();
+      const session = createPairSession();
+      const device = {
+        getManagedConfig: jest.fn(),
+        applyManagedConfig: jest.fn().mockResolvedValue(undefined),
+      };
+      await driver.onRepair(session, device);
+
+      await session.handlers.set_managed_config({ mode: 'gate', ...VALID_GATE_CONFIG });
+      expect(device.applyManagedConfig).toHaveBeenCalledWith(expect.objectContaining({
+        mode: 'gate',
+        gateOpeningTime: 3,
+        gateHoldTime: 3,
+        gateClosingTime: 1,
       }));
     });
   });

@@ -39,18 +39,20 @@ describe('app manifest', () => {
     const [driver] = manifest.drivers;
     expect(driver.id).toBe('garagedoor');
     expect(driver.class).toBe('garagedoor');
-    expect(driver.capabilities).toEqual(['garagedoor_closed', 'garagedoor_state']);
+    // `button` is the driver-level superset; flow/managed devices are paired
+    // with an explicit capability list that leaves it out
+    expect(driver.capabilities).toEqual(['garagedoor_closed', 'garagedoor_state', 'button']);
   });
 
   test('pairing starts with the mode chooser and ends in list/add devices', () => {
     const [driver] = manifest.drivers;
-    expect(driver.pair.map(view => view.id)).toEqual(['mode', 'managed_config', 'list_devices', 'add_devices']);
+    expect(driver.pair.map(view => view.id)).toEqual(['mode', 'managed_config', 'gate_config', 'list_devices', 'add_devices']);
     expect(driver.pair[0].template).toBeUndefined(); // custom view
-    expect(driver.pair[2].navigation).toEqual({ next: 'add_devices' });
+    expect(driver.pair[3].navigation).toEqual({ next: 'add_devices' });
     expect(driver.repair.map(view => view.id)).toEqual(['managed_config']);
 
     // the custom views must exist on disk
-    for (const file of ['pair/mode.html', 'pair/managed_config.html', 'repair/managed_config.html']) {
+    for (const file of ['pair/mode.html', 'pair/managed_config.html', 'pair/gate_config.html', 'repair/managed_config.html']) {
       expect(fs.existsSync(path.join(ROOT, 'drivers/garagedoor', file))).toBe(true);
     }
   });
@@ -59,11 +61,14 @@ describe('app manifest', () => {
     const [driver] = manifest.drivers;
     const settingIds = driver.settings.flatMap(group => group.children.map(child => child.id));
     expect(settingIds).toEqual(
-      expect.arrayContaining(['mode', 'travel_time', 'closed_sensor_meaning', 'open_sensor_meaning', 'managed_devices_summary']),
+      expect.arrayContaining([
+        'mode', 'travel_time', 'closed_sensor_meaning', 'open_sensor_meaning', 'managed_devices_summary',
+        'gate_opening_time', 'gate_hold_time', 'gate_closing_time',
+      ]),
     );
     const mode = driver.settings.flatMap(g => g.children).find(c => c.id === 'mode');
     expect(mode.value).toBe('flow'); // existing devices stay flow controlled
-    expect(mode.values.map(v => v.id)).toEqual(['flow', 'managed']);
+    expect(mode.values.map(v => v.id)).toEqual(['flow', 'managed', 'gate']);
   });
 
   test('flow cards exist and are scoped to this driver', () => {

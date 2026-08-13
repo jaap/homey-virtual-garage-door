@@ -1,6 +1,6 @@
 {
   "name": "com.jaap.virtualgaragedoor",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Turn Homey Flows into a proper virtual garage door device",
   "main": "app.js",
   "license": "MIT",

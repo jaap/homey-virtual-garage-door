@@ -28,6 +28,13 @@
               "en": "Managed — the app operates your relay and sensors",
               "nl": "Beheerd — de app bedient je relais en sensoren"
             }
+          },
+          {
+            "id": "gate",
+            "label": {
+              "en": "Auto-closing gate — timer only, no sensors",
+              "nl": "Zelfsluitende poort — alleen timers, geen sensoren"
+            }
           }
         ],
         "hint": {
@@ -103,6 +110,63 @@
         "hint": {
           "en": "Change this if the device shows Open while the door is actually closed.",
           "nl": "Wijzig dit als het apparaat Open toont terwijl de deur eigenlijk gesloten is."
+        }
+      },
+      {
+        "id": "gate_opening_time",
+        "type": "number",
+        "label": {
+          "en": "Gate: opening time",
+          "nl": "Poort: openingstijd"
+        },
+        "value": 10,
+        "min": 1,
+        "max": 300,
+        "units": {
+          "en": "seconds",
+          "nl": "seconden"
+        },
+        "hint": {
+          "en": "Auto-closing gate only: how long the simulated Opening state lasts. Tip: short times (for example 3) bring the tile back to Closed quickly, so the gate can be triggered again right away.",
+          "nl": "Alleen zelfsluitende poort: hoe lang de gesimuleerde status 'Bezig met openen' duurt. Tip: korte tijden (bijvoorbeeld 3) brengen de tegel snel terug naar Gesloten, zodat de poort direct opnieuw kan worden geactiveerd."
+        }
+      },
+      {
+        "id": "gate_hold_time",
+        "type": "number",
+        "label": {
+          "en": "Gate: stays open for",
+          "nl": "Poort: blijft open gedurende"
+        },
+        "value": 30,
+        "min": 1,
+        "max": 600,
+        "units": {
+          "en": "seconds",
+          "nl": "seconden"
+        },
+        "hint": {
+          "en": "Auto-closing gate only: how long the simulated Open state lasts before the gate is assumed to close again.",
+          "nl": "Alleen zelfsluitende poort: hoe lang de gesimuleerde status Open duurt voordat de poort geacht wordt weer te sluiten."
+        }
+      },
+      {
+        "id": "gate_closing_time",
+        "type": "number",
+        "label": {
+          "en": "Gate: closing time",
+          "nl": "Poort: sluittijd"
+        },
+        "value": 10,
+        "min": 1,
+        "max": 300,
+        "units": {
+          "en": "seconds",
+          "nl": "seconden"
+        },
+        "hint": {
+          "en": "Auto-closing gate only: how long the simulated Closing state lasts.",
+          "nl": "Alleen zelfsluitende poort: hoe lang de gesimuleerde status 'Bezig met sluiten' duurt."
         }
       },
       {

@@ -6,7 +6,16 @@
       "managedTitle": "Managed — no Flows needed",
       "managedDesc": "Pick the relay that triggers your door and the sensor that detects it is closed. The app operates the door and tracks its state itself.",
       "flowTitle": "Flow controlled",
-      "flowDesc": "Your own Advanced Flows respond to open/close requests, operate the hardware and report the door state back. Maximum control."
+      "flowDesc": "Your own Advanced Flows respond to open/close requests, operate the hardware and report the door state back. Maximum control.",
+      "gateTitle": "Auto-closing gate — timer only",
+      "gateDesc": "For shared entrance gates that open on a pulse and close again by themselves. No sensors: the app animates the cycle on timers, and every trigger simply means \"open / stay open\"."
+    },
+    "gate": {
+      "control": "Which device triggers the gate?",
+      "opening": "Opening (s)",
+      "hold": "Open (s)",
+      "closing": "Closing (s)",
+      "hint": "These only animate the tile — the gate itself keeps its own timing. Honest values mirror reality; short values (for example 3 / 3 / 1) bring the tile back to Closed within seconds, so the gate can immediately be triggered again — also from Apple Home, whose garage tile only accepts a new Open once it shows Closed."
     },
     "config": {
       "loading": "Loading your devices…",
@@ -34,6 +43,7 @@
     "already_closed": "The garage door is already closed.",
     "already_moving": "The garage door is already moving — wait until it finishes.",
     "sensor_conflict": "Both sensors report an endpoint at the same time — check the sensor configuration.",
+    "gate_auto_close": "This gate closes by itself — it can only be opened.",
     "not_configured": "Managed mode is not configured — use 'Repair' on this device to select your relay and sensors.",
     "control_failed": "The control device could not be switched — check that it is available."
   },

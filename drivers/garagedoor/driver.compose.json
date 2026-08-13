@@ -5,7 +5,8 @@
   "class": "garagedoor",
   "capabilities": [
     "garagedoor_closed",
-    "garagedoor_state"
+    "garagedoor_state",
+    "button"
   ],
   "platforms": [
     "local"
@@ -22,6 +23,9 @@
     },
     {
       "id": "managed_config"
+    },
+    {
+      "id": "gate_config"
     },
     {
       "id": "list_devices",

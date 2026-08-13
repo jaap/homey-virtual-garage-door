@@ -198,6 +198,28 @@ function createManagedDevice({
 }
 
 /**
+ * A ready-to-init auto-closing gate device: control relay `ctrl` and the
+ * user's quick-reset timing trick (3 s opening / 3 s open / 1 s closing).
+ */
+function createGateDevice({ settings = {}, store = {} } = {}) {
+  const control = createApiDevice({ id: 'ctrl', name: 'Gate Relay', capabilities: { onoff: { value: false } } });
+  const api = createApi({ ctrl: control });
+
+  const device = createDevice({
+    api,
+    capabilities: { button: null },
+    settings: {
+      mode: 'gate', gate_opening_time: 3, gate_hold_time: 3, gate_closing_time: 1, ...settings,
+    },
+    store: {
+      controlDevice: { id: 'ctrl', capability: 'onoff' }, closedSensor: null, openSensor: null, ...store,
+    },
+  });
+
+  return { device, api, control };
+}
+
+/**
  * Build a VirtualGarageDoorDriver with a mocked Homey SDK surface. Action
  * card mocks are exposed per card id via `driver._actionCards`.
  */
@@ -246,6 +268,7 @@ module.exports = {
   createApi,
   createApiDevice,
   createManagedDevice,
+  createGateDevice,
   createPairSession,
   requestViaCapability,
   fireTravelTimer,

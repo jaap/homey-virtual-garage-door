@@ -6,7 +6,16 @@
       "managedTitle": "Beheerd — geen Flows nodig",
       "managedDesc": "Kies het relais dat je deur aanstuurt en de sensor die detecteert dat de deur dicht is. De app bedient de deur en houdt zelf de status bij.",
       "flowTitle": "Flow-gestuurd",
-      "flowDesc": "Je eigen Advanced Flows reageren op open/sluit-verzoeken, bedienen de hardware en rapporteren de deurstatus terug. Maximale controle."
+      "flowDesc": "Je eigen Advanced Flows reageren op open/sluit-verzoeken, bedienen de hardware en rapporteren de deurstatus terug. Maximale controle.",
+      "gateTitle": "Zelfsluitende poort — alleen timers",
+      "gateDesc": "Voor gedeelde toegangspoorten die openen op een puls en vanzelf weer sluiten. Geen sensoren: de app animeert de cyclus met timers en elke trigger betekent simpelweg \"openen / open blijven\"."
+    },
+    "gate": {
+      "control": "Welk apparaat stuurt de poort aan?",
+      "opening": "Openen (s)",
+      "hold": "Open (s)",
+      "closing": "Sluiten (s)",
+      "hint": "Deze tijden animeren alleen de tegel — de poort houdt zijn eigen timing. Eerlijke waarden volgen de werkelijkheid; korte waarden (bijvoorbeeld 3 / 3 / 1) brengen de tegel binnen enkele seconden terug naar Gesloten, zodat de poort direct opnieuw kan worden geactiveerd — ook vanuit Apple Home, waar de garagetegel pas een nieuwe Open accepteert zodra deze Gesloten toont."
     },
     "config": {
       "loading": "Apparaten laden…",
@@ -34,6 +43,7 @@
     "already_closed": "De garagedeur is al dicht.",
     "already_moving": "De garagedeur is al in beweging — wacht tot deze klaar is.",
     "sensor_conflict": "Beide sensoren melden tegelijk een eindpunt — controleer de sensorconfiguratie.",
+    "gate_auto_close": "Deze poort sluit vanzelf — hij kan alleen worden geopend.",
     "not_configured": "Beheerde modus is niet geconfigureerd — gebruik 'Herstellen' op dit apparaat om je relais en sensoren te kiezen.",
     "control_failed": "Het bedieningsapparaat kon niet worden geschakeld — controleer of het bereikbaar is."
   },

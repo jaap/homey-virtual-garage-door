@@ -23,35 +23,60 @@ module.exports = class VirtualGarageDoorDriver extends Homey.Driver {
       pendingConfig = this.validateManagedConfig(config);
       return true;
     });
-    session.setHandler('list_devices', async () => {
-      const device = {
-        name: this.homey.__('pair.defaultName'),
-        data: { id: randomUUID() },
-      };
-      if (pendingConfig) {
-        device.settings = {
-          mode: 'managed',
-          travel_time: pendingConfig.travelTime,
-          closed_sensor_meaning: pendingConfig.closedSensorMeaning,
-          open_sensor_meaning: pendingConfig.openSensorMeaning,
-        };
-        device.store = {
-          controlDevice: pendingConfig.controlDevice,
-          closedSensor: pendingConfig.closedSensor,
-          openSensor: pendingConfig.openSensor,
-        };
-      }
-      return [device];
+    session.setHandler('set_gate_config', async config => {
+      pendingConfig = this.validateGateConfig(config);
+      return true;
     });
+    session.setHandler('list_devices', async () => [this.buildPairDevice(pendingConfig)]);
   }
 
   async onRepair(session, device) {
     session.setHandler('get_pair_data', () => this.getPairData());
     session.setHandler('get_current_config', async () => device.getManagedConfig());
     session.setHandler('set_managed_config', async config => {
-      await device.applyManagedConfig(this.validateManagedConfig(config));
+      const validated = config && config.mode === 'gate'
+        ? this.validateGateConfig(config)
+        : this.validateManagedConfig(config);
+      await device.applyManagedConfig(validated);
       return true;
     });
+  }
+
+  buildPairDevice(config) {
+    const device = {
+      name: this.homey.__('pair.defaultName'),
+      data: { id: randomUUID() },
+      capabilities: ['garagedoor_closed', 'garagedoor_state'],
+    };
+    if (!config) return device; // flow controlled
+
+    device.store = { controlDevice: config.controlDevice };
+    if (config.mode === 'gate') {
+      device.capabilities = ['garagedoor_closed', 'garagedoor_state', 'button'];
+      device.capabilitiesOptions = {
+        button: {
+          title: { en: 'Open / keep open', nl: 'Openen / open houden' },
+        },
+      };
+      device.settings = {
+        mode: 'gate',
+        gate_opening_time: config.gateOpeningTime,
+        gate_hold_time: config.gateHoldTime,
+        gate_closing_time: config.gateClosingTime,
+      };
+      device.store.closedSensor = null;
+      device.store.openSensor = null;
+      return device;
+    }
+    device.settings = {
+      mode: 'managed',
+      travel_time: config.travelTime,
+      closed_sensor_meaning: config.closedSensorMeaning,
+      open_sensor_meaning: config.openSensorMeaning,
+    };
+    device.store.closedSensor = config.closedSensor;
+    device.store.openSensor = config.openSensor;
+    return device;
   }
 
   /**
@@ -111,12 +136,33 @@ module.exports = class VirtualGarageDoorDriver extends Homey.Driver {
 
     const meaning = value => (value === 'inverted' ? 'inverted' : 'default');
     return {
+      mode: 'managed',
       controlDevice: { id: controlDevice.id, capability: 'onoff' },
       closedSensor: { id: closedSensor.id, capability: closedSensor.capability },
       openSensor: openSensor ? { id: openSensor.id, capability: openSensor.capability } : null,
       travelTime,
       closedSensorMeaning: meaning(config.closedSensorMeaning),
       openSensorMeaning: meaning(config.openSensorMeaning),
+    };
+  }
+
+  validateGateConfig(config) {
+    if (!config || typeof config !== 'object') throw new Error('Invalid configuration');
+    if (!config.controlDevice || !config.controlDevice.id) throw new Error('A control device is required');
+
+    const time = (value, min, max, label) => {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+        throw new Error(`${label} must be between ${min} and ${max} seconds`);
+      }
+      return parsed;
+    };
+    return {
+      mode: 'gate',
+      controlDevice: { id: config.controlDevice.id, capability: 'onoff' },
+      gateOpeningTime: time(config.gateOpeningTime, 1, 300, 'Opening time'),
+      gateHoldTime: time(config.gateHoldTime, 1, 600, 'Open time'),
+      gateClosingTime: time(config.gateClosingTime, 1, 300, 'Closing time'),
     };
   }
 
