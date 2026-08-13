@@ -1,5 +1,7 @@
 # Virtual Garage Door for Homey
 
+[![Tests](https://github.com/jaap/homey-virtual-garage-door/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/jaap/homey-virtual-garage-door/actions/workflows/test.yml)
+
 Make your garage door a **real garage door in Homey** — even though it is actually a relay and a contact sensor. The device is a proper Homey `garagedoor` device, so HomeKit bridges such as [HomeKitty](https://github.com/robertklep/name.klep.homekitty) show it in Apple Home as a genuine garage-door accessory, with Siri, CarPlay and automations included.
 
 Works with any hardware Homey can see: Shelly or other relays, Aqara/Zigbee/Z-Wave contact sensors, wired sensors — this app never talks to specific brands.
