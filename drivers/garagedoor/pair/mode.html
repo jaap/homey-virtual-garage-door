@@ -1,0 +1,42 @@
+<style>
+  .vgd-mode { display: flex; flex-direction: column; gap: 12px; padding: 8px 4px; }
+  .vgd-title { font-size: 16px; font-weight: 600; margin: 4px 0 8px; text-align: center; }
+  .vgd-option {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    border: 1px solid rgba(0, 0, 0, 0.15); border-radius: 10px;
+    background: transparent; padding: 14px 16px; font: inherit; color: inherit;
+  }
+  .vgd-option:hover { border-color: #2e56b5; }
+  .vgd-option h3 { margin: 0 0 4px; font-size: 15px; }
+  .vgd-option p { margin: 0; font-size: 13px; opacity: 0.75; line-height: 1.4; }
+</style>
+
+<div class="vgd-mode">
+  <div class="vgd-title" data-i18n="pair.mode.title">How should this garage door work?</div>
+
+  <button class="vgd-option" id="vgd-managed" type="button">
+    <h3 data-i18n="pair.mode.managedTitle">Managed — no Flows needed</h3>
+    <p data-i18n="pair.mode.managedDesc">Pick the relay that triggers your door and the sensor that detects it is closed. The app operates the door and tracks its state itself.</p>
+  </button>
+
+  <button class="vgd-option" id="vgd-flow" type="button">
+    <h3 data-i18n="pair.mode.flowTitle">Flow controlled</h3>
+    <p data-i18n="pair.mode.flowDesc">Your own Advanced Flows respond to open/close requests, operate the hardware and report the door state back. Maximum control.</p>
+  </button>
+</div>
+
+<script type="text/javascript">
+  (function initModeView() {
+    document.querySelectorAll('[data-i18n]').forEach(function translate(el) {
+      var text = Homey.__(el.getAttribute('data-i18n'));
+      if (text && text !== el.getAttribute('data-i18n')) el.textContent = text;
+    });
+
+    document.getElementById('vgd-flow').addEventListener('click', function chooseFlow() {
+      Homey.showView('list_devices');
+    });
+    document.getElementById('vgd-managed').addEventListener('click', function chooseManaged() {
+      Homey.showView('managed_config');
+    });
+  })();
+</script>

@@ -36,6 +36,13 @@
         "en": "Closing",
         "nl": "Bezig met sluiten"
       }
+    },
+    {
+      "id": "stopped",
+      "title": {
+        "en": "Stopped",
+        "nl": "Gestopt"
+      }
     }
   ],
   "getable": true,

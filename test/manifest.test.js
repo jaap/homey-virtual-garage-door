@@ -25,7 +25,8 @@ describe('app manifest', () => {
     expect(manifest.id).toBe('com.jaap.virtualgaragedoor');
     expect(manifest.sdk).toBe(3);
     expect(manifest.platforms).toEqual(['local']);
-    expect(manifest.permissions).toEqual([]);
+    // Managed mode operates other devices through the Homey Web API
+    expect(manifest.permissions).toEqual(['homey:manager:api']);
   });
 
   test('versions in app.json, compose and package.json agree', () => {
@@ -41,15 +42,33 @@ describe('app manifest', () => {
     expect(driver.capabilities).toEqual(['garagedoor_closed', 'garagedoor_state']);
   });
 
-  test('pairing is the minimal list_devices -> add_devices flow', () => {
+  test('pairing starts with the mode chooser and ends in list/add devices', () => {
     const [driver] = manifest.drivers;
-    expect(driver.pair.map(view => view.template)).toEqual(['list_devices', 'add_devices']);
-    expect(driver.pair[0].navigation).toEqual({ next: 'add_devices' });
+    expect(driver.pair.map(view => view.id)).toEqual(['mode', 'managed_config', 'list_devices', 'add_devices']);
+    expect(driver.pair[0].template).toBeUndefined(); // custom view
+    expect(driver.pair[2].navigation).toEqual({ next: 'add_devices' });
+    expect(driver.repair.map(view => view.id)).toEqual(['managed_config']);
+
+    // the custom views must exist on disk
+    for (const file of ['pair/mode.html', 'pair/managed_config.html', 'repair/managed_config.html']) {
+      expect(fs.existsSync(path.join(ROOT, 'drivers/garagedoor', file))).toBe(true);
+    }
+  });
+
+  test('managed-mode settings are declared', () => {
+    const [driver] = manifest.drivers;
+    const settingIds = driver.settings.flatMap(group => group.children.map(child => child.id));
+    expect(settingIds).toEqual(
+      expect.arrayContaining(['mode', 'travel_time', 'closed_sensor_meaning', 'open_sensor_meaning', 'managed_devices_summary']),
+    );
+    const mode = driver.settings.flatMap(g => g.children).find(c => c.id === 'mode');
+    expect(mode.value).toBe('flow'); // existing devices stay flow controlled
+    expect(mode.values.map(v => v.id)).toEqual(['flow', 'managed']);
   });
 
   test('flow cards exist and are scoped to this driver', () => {
     const triggers = manifest.flow.triggers.map(t => t.id).sort();
-    expect(triggers).toEqual(['close_requested', 'garagedoor_state_changed', 'open_requested']);
+    expect(triggers).toEqual(['close_requested', 'garagedoor_state_changed', 'movement_failed', 'open_requested']);
 
     const actions = manifest.flow.actions.map(a => a.id).sort();
     expect(actions).toEqual(['request_close', 'request_open', 'set_state']);
@@ -62,6 +81,13 @@ describe('app manifest', () => {
         filter: 'driver_id=garagedoor',
       });
     }
+  });
+
+  test('the movement-failed trigger exposes the direction as a token', () => {
+    const trigger = manifest.flow.triggers.find(t => t.id === 'movement_failed');
+    expect(trigger.tokens).toHaveLength(1);
+    expect(trigger.tokens[0].name).toBe('direction');
+    expect(trigger.tokens[0].type).toBe('string');
   });
 
   test('the state-changed trigger exposes the capability value as a token', () => {

@@ -45,6 +45,30 @@
           }
         }
       ]
+    },
+    {
+      "id": "movement_failed",
+      "title": {
+        "en": "The door failed to reach its position",
+        "nl": "De deur heeft zijn positie niet bereikt"
+      },
+      "hint": {
+        "en": "Starts in Managed mode when the expected travel time passes without the door reaching its endpoint. The tag tells whether it happened while opening or closing.",
+        "nl": "Start in Beheerde modus wanneer de verwachte looptijd verstrijkt zonder dat de deur zijn eindpunt bereikt. De tag geeft aan of dit tijdens het openen of sluiten gebeurde."
+      },
+      "tokens": [
+        {
+          "name": "direction",
+          "type": "string",
+          "title": {
+            "en": "Direction",
+            "nl": "Richting"
+          },
+          "example": {
+            "en": "closing"
+          }
+        }
+      ]
     }
   ],
   "actions": [
@@ -97,6 +121,13 @@
               "title": {
                 "en": "Closing",
                 "nl": "Bezig met sluiten"
+              }
+            },
+            {
+              "id": "stopped",
+              "title": {
+                "en": "Stopped",
+                "nl": "Gestopt"
               }
             }
           ]

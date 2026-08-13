@@ -1,140 +1,120 @@
 # Virtual Garage Door for Homey
 
-A Homey Pro app that provides a generic **virtual garage door** device, so that arbitrary existing Homey devices and Advanced Flows can be composed into a proper `garagedoor` device — one that HomeKit bridges such as [HomeKitty](https://github.com/robertklep/name.klep.homekitty) expose to Apple Home as a real garage door accessory.
+Make your garage door a **real garage door in Homey** — even though it is actually a relay and a contact sensor. The device is a proper Homey `garagedoor` device, so HomeKit bridges such as [HomeKitty](https://github.com/robertklep/name.klep.homekitty) show it in Apple Home as a genuine garage-door accessory, with Siri, CarPlay and automations included.
 
-The app has **no knowledge of your hardware**. All communication between the virtual garage door and the physical world happens through Homey Flow cards:
+Works with any hardware Homey can see: Shelly or other relays, Aqara/Zigbee/Z-Wave contact sensors, wired sensors — this app never talks to specific brands.
+
+## Two ways to use it
+
+**Managed mode (recommended for most people).** You pick the relay that triggers your door, the sensor that detects "fully closed", optionally a second sensor for "fully open", and how long the door takes to travel. The app then operates the door and tracks its state by itself. **No Flows needed.**
+
+**Flow controlled mode (maximum control).** The device is a pure shell: when someone asks it to open or close, it only fires a Flow trigger, and its state only changes when your own Advanced Flows report it. All logic — safety checks, relay pulses, sensor interpretation — lives visibly in your Flows.
+
+Both modes can be mixed freely across devices, and you can have as many virtual garage doors as you have doors.
+
+---
+
+## Setting up Managed mode
+
+### Before you start
+
+You need, already working in Homey:
+
+1. **A relay that triggers the door** — any device with an on/off switch (a Shelly wired to the opener's dry contact, for example).
+   ⚠️ **Set the relay itself to switch off automatically** after ~0.5 s ("auto-off", "timer" or "momentary" in the relay's own settings). This app only switches it **on** — the relay must release by itself, so the pulse keeps working even if Homey is busy.
+2. **A contact sensor that closes when the door is fully closed** — an Aqara/any door sensor mounted so it triggers only in the fully-closed position.
+3. Optional: **a second sensor at the fully-open position**. With one sensor the app can *know* "closed" and must *infer* "open" from travel time; with two sensors both ends are known for certain.
+
+Also time your door once with a stopwatch: how many seconds from fully closed to fully open? Add 10–20% — that is your **travel time** (door takes ~15 s → enter 18).
+
+### Adding the door
+
+1. Homey app → **Devices** → **+** → **Virtual Garage Door**.
+2. Choose **Managed — no Flows needed**.
+3. Pick your relay, your closed sensor, optionally your open sensor, and enter the travel time.
+4. For each sensor, tell the app what "at the endpoint" looks like: *the door is fully closed when this sensor reports contact closed* (the normal case) or *contact open* (if your sensor is mounted the other way around).
+5. Add the device, name it (e.g. "Garage"), done.
+
+Tap the tile: the relay pulses, the state shows *Opening*, and then *Open* — confirmed by your sensor if you have one at the top, otherwise when the travel time has passed. In Apple Home (via HomeKitty) the door appears as a real garage door.
+
+**Wrong way around?** If the device shows *Open* while the door is really closed, flip *"The door is fully closed when the sensor reports…"* in the device settings — no need to remount anything.
+
+**Changing devices later:** device settings → **Maintenance → Repair** re-opens the configuration. Travel time and sensor meaning can be changed directly in the settings.
+
+### What Managed mode does (and refuses to do)
+
+* **Sensors are the truth.** Reaching an endpoint always wins, whoever moved the door — wall button, car remote and neighbour included. Leaving an endpoint without a command is treated as movement in the obvious direction (a closed door whose sensor releases is *Opening*).
+* **Travel time is a watchdog, not a claim.** With two sensors, a door that doesn't reach its endpoint in time becomes **Stopped**, the device shows a warning, and the *"door failed to reach its position"* Flow trigger fires. The app never claims *Closed* from a timer — only the closed sensor can say that. With one sensor, *Open* after opening is the one honest inference it makes (and it is documented as such).
+* **Careful with pulses.** Requests are ignored with a clear message when the door is already there, already moving (a pulse mid-travel means stop/reverse/who-knows depending on the opener), or when the sensors contradict each other (both endpoints at once = check your setup). From **Stopped**, a new request pulses and assumes the direction you asked for; the sensors then correct it at the next endpoint.
+* **After a restart** the app re-reads the sensors and settles conservatively; between endpoints it reports **Stopped** rather than guessing (with a single sensor, a door last known open stays *Open*). It never pulses the relay by itself — not at startup, not ever, except when you ask it to move.
+
+---
+
+## Setting up Flow controlled mode
+
+Choose **Flow controlled** when adding the device. The contract is simple:
+
+* When anything (Apple Home, the tile, a Flow) asks the door to move, the device fires **"Open was requested"** / **"Close was requested"** — and nothing else happens. In the Homey app you'll see "Open requested — waiting for a Flow to report the actual state"; that message is by design.
+* The state changes **only** when a Flow runs **"Report the door state as …"** (Closed / Opening / Open / Closing / Stopped).
+
+One Advanced Flow canvas per door covers a Shelly + one Aqara closed-sensor setup:
 
 ```text
-Apple Home
-    ↕
-HomeKitty
-    ↕
-Virtual Garage Door   ←  this app
-    ↕
-Homey Advanced Flows
-    ↕
-Arbitrary hardware
-    ├── Shelly / relay / smart switch
-    └── Aqara / Zigbee / Z-Wave / wired sensors / etc.
+Lane 1  [Door] Open was requested
+          IF [Door] Is closed → pulse relay → Report as Opening
+          ELSE                → Report as Open          (settles Apple Home)
+
+Lane 2  [Door] Close was requested
+          IF [Door] is open   → pulse relay → Report as Closing
+          ELSE                → Report as Closed
+
+Lane 3  [Sensor] contact became closed → Report as Closed
+
+Lane 4  [Sensor] contact became open   → Report as Opening
+          (delay ≈ travel time) IF contact still open → Report as Open
 ```
 
-## Design principle: commands and observations are separate
+Lanes 3–4 are unconditional ground truth: they keep the door honest when someone uses the wall button, and they re-sync everything after reboots. Add your own safety conditions to lanes 1–2. If a Flow denies a request, report the current state again — that snaps Apple Home out of "Opening…".
 
-A request to open the garage does **not** mean the garage is open.
-
-* When Apple Home, the Homey app, or a Flow asks the door to open or close, the device only emits a Flow trigger (**"Open was requested"** / **"Close was requested"**). Its state does not change.
-* The state of the virtual garage door only changes when your Flow explicitly reports it back with the **"Report the door state"** action card (Closed / Opening / Open / Closing).
-
-Technically, the device *rejects* every direct write to its `garagedoor_closed` capability after emitting the request trigger, so Homey never commits a state that no sensor confirmed. In the Homey app this shows up as a short message when you tap the tile ("Open requested — waiting for a Flow to report the actual state") — that is by design, and it is exactly what makes Apple Home behave correctly (see the HomeKitty section).
-
-All safety logic and hardware interpretation stays visible and configurable in your Advanced Flows:
-
-```text
-Apple Home requests OPEN
-        ↓
-Virtual Garage Door triggers "Open was requested"
-        ↓
-Advanced Flow checks safety/state, pulses the relay
-        ↓
-Advanced Flow reports OPENING
-        ↓
-Physical sensor eventually confirms position
-        ↓
-Advanced Flow reports OPEN
-```
-
-## Device model
-
-Each Virtual Garage Door device is a standard Homey `garagedoor`-class device with:
-
-| Capability | Type | Role |
-|---|---|---|
-| `garagedoor_closed` | boolean (standard Homey capability, `true` = closed) | The device's main control and the last **reported** closed-state. Any attempt to set it (device tile, Apple Home, built-in Flow cards) is converted into a *request trigger* and rejected. |
-| `garagedoor_state` | enum: `closed`, `opening`, `open`, `closing` (custom, read-only sensor) | The full last **reported** state, visible on the device and usable in Flows. |
-
-There is no standard Homey capability for garage-door travel state — `garagedoor_closed` is the only `garagedoor_*` capability among Homey's 184 standard capabilities, and nothing standard models opening/closing for doors (`windowcoverings_state`'s `up`/`idle`/`down` cannot distinguish *open* from *closed* when idle). The read-only `garagedoor_state` enum is therefore the one custom capability this app defines. `garagedoor_closed` remains the single source of truth for every integration that consumes standard capabilities (HomeKitty included); `garagedoor_state` is derived information for you and your Flows.
+---
 
 ## Flow cards
 
-**Triggers (WHEN):**
+**Triggers (WHEN)** — both modes:
 
-* **Open was requested** — someone or something asked the door to open.
-* **Close was requested** — someone or something asked the door to close.
-* **The door state changed** — a Flow reported a new state; the `State` tag contains `closed`, `opening`, `open` or `closing`.
+* **Open was requested** / **Close was requested** — someone or something asked for movement. In Managed mode these are informational (the app already handles the request).
+* **The door state changed** — with a `State` tag (`closed`, `opening`, `open`, `closing`, `stopped`).
+* **The door failed to reach its position** — Managed mode's travel-time watchdog, with a `Direction` tag. Perfect for a notification Flow.
+* Built-in: *Closed* / *Opened* triggers and the *Is closed* condition come free with every garage door in Homey.
 
-**Actions (THEN):**
+**Actions (THEN)** — both modes:
 
-* **Report the door state as [Closed / Opening / Open / Closing]** — tell the device what is actually happening. This is the only way its state changes.
-* **Request to open** / **Request to close** — emit the same request triggers that Apple Home or the device tile would, without an error result. Use these when another Flow wants to operate the door.
+* **Request to open** / **Request to close** — ask for movement, exactly like the tile or Apple Home would. In Managed mode this operates the door; in Flow mode it fires the request trigger. (The built-in *Open/Close/Toggle* cards work too but report the informational message as a card error.)
+* **Report the door state as …** — in Flow mode this is *the* way state changes; in Managed mode it is an escape hatch that overrides the state machine (it also cancels a running travel timer).
 
-**Built-in cards you get for free** (Homey generates them for every device with `garagedoor_closed`):
+---
 
-* Triggers: *Closed* / *Opened* — fire when the **reported** state changes.
-* Condition: *Is closed / open* — checks the **reported** state.
-* Actions: *Close* / *Open* / *Toggle* — these go through the same request path; they work, but the card will report the "waiting for a Flow" message as an error, because the app refuses to change state without a report. In Flows, prefer **Request to open/close**.
+## Apple Home / HomeKitty
 
-## Example: single closed-sensor setup (Shelly relay + Aqara contact sensor)
+Verified against HomeKitty 2.5.8 source. HomeKitty maps any device with class `garagedoor` + capability `garagedoor_closed` to a HomeKit **GarageDoorOpener**; both `CurrentDoorState` and `TargetDoorState` derive from that one boolean (`true` → Closed, `false` → Open), and a HomeKit Open/Close writes back into the same capability — which this app treats as a request.
 
-With only a fully-closed sensor you know *Closed* for certain; everything else is interpretation, and that interpretation belongs in your Flow:
+What you will see in Apple Home:
 
-```text
-WHEN  Virtual Garage Door: Open was requested
-AND   (optional safety conditions)
-THEN  Pulse the Shelly relay
-      Virtual Garage Door: Report the door state as Opening
-      (optionally: after ~20 s, Report the door state as Open)
+* Tap **Open** in Apple Home: Home shows **"Opening…"** (its own rendering of target ≠ current) until the door's state actually changes to Open. This works because the app deliberately *rejects* the direct capability write after handling it as a request — HomeKitty swallows the rejection by design, keeping the transient alive. When the app later reports/confirms the state, both HomeKit characteristics update together.
+* Transitional honesty has limits inherited from the one-boolean mapping: `opening`, `closing` and `stopped` all read as "not closed", so Apple Home shows **Open** for anything that isn't fully closed, and movements initiated *outside* HomeKit jump straight between Closed and Open. HomeKitty never emits HomeKit's OPENING/CLOSING/STOPPED current-states, and device warnings don't reach HomeKit.
+* The custom `garagedoor_state` sensor is invisible to HomeKitty (extra capabilities are ignored by its mapper) and cannot break the mapping.
 
-WHEN  Virtual Garage Door: Close was requested
-AND   Aqara sensor: contact is open        ← door is not already closed
-THEN  Pulse the Shelly relay
-      Virtual Garage Door: Report the door state as Closing
+No HomeKit-specific code exists in this app; it simply exposes exactly the class + capability HomeKitty wants.
 
-WHEN  Aqara sensor: contact became closed
-THEN  Virtual Garage Door: Report the door state as Closed
+---
 
-WHEN  Aqara sensor: contact became open
-THEN  (if you did not just request anything: someone used the wall button / remote)
-      Virtual Garage Door: Report the door state as Opening or Open — your call
-```
+## Good to know
 
-If a request should be **denied** (a safety condition failed), report the current state again — that snaps Apple Home out of its "Opening…"/"Closing…" display.
-
-Later, if you add a second (fully-open) sensor, only your Flows change — the virtual device stays exactly the same.
-
-## HomeKitty / Apple Home
-
-Verified against HomeKitty 2.5.8 (app id `name.klep.homekitty`, actively maintained). What HomeKitty expects, from [`lib/maps/garagedoor.js`](https://github.com/robertklep/name.klep.homekitty/blob/main/lib/maps/garagedoor.js):
-
-* A device with **class `garagedoor`** (or virtual class) and a UI-visible **`garagedoor_closed`** capability — exactly what this app provides. Extra capabilities are ignored by the mapper, so the custom `garagedoor_state` sensor is invisible to HomeKit and cannot break the mapping.
-* The device is exposed as a HomeKit **GarageDoorOpener** service. Both `CurrentDoorState` and `TargetDoorState` are derived from the one boolean: `true` → Closed, `false` → Open. A HomeKit *Open/Close* command writes `TargetDoorState`, which HomeKitty translates into `setCapabilityValue('garagedoor_closed', …)` on our device — invoking our capability listener, i.e. the request path.
-* HomeKitty never sets the HomeKit `OPENING`/`CLOSING`/`STOPPED` states itself, and both characteristics move together whenever the capability changes on the Homey side.
-
-How the pieces interact, and why this app rejects direct writes:
-
-1. You tap **Open** in Apple Home. HomeKit stores `TargetDoorState = Open` while `CurrentDoorState` is still Closed, so Apple Home shows **"Opening…"** (Apple renders this whenever target ≠ current).
-2. HomeKitty calls `setCapabilityValue('garagedoor_closed', false)`. Our device fires **Open was requested** and rejects the write; HomeKitty deliberately swallows the rejection. Because the capability did not change, no update reaches HomeKit — target stays Open, current stays Closed, and "Opening…" keeps showing. (If the app committed the value instead, HomeKitty would immediately move *both* characteristics and Apple Home would claim the door is open the instant you asked.)
-3. Your Flow pulses the relay and reports **Opening** → `garagedoor_closed` stays `false`… and eventually reports **Open**. The capability change reaches HomeKitty, both characteristics become Open, and Apple Home settles on "Open".
-4. Closing mirrors this with "Closing…" until your Flow reports **Closed**.
-
-Known limitations of the stock mapping (inherent to `garagedoor_closed` being one boolean):
-
-* "Opening…"/"Closing…" only appears for **HomeKit-initiated** actions. When the door is operated from the Homey side (wall button, Flow), Apple Home jumps straight between Closed and Open at the moment your Flow reports it.
-* Because `opening`/`closing` map to `false` (not closed), Apple Home shows "Open" during a report-driven transition rather than a moving state — honest, just less pretty.
-* If your Flow denies a request and reports nothing, Apple Home can keep showing "Opening…" until the next actual state change. Have the Flow re-report the current state to settle it.
-* HomeKitty caches a HomeKit-written target value internally, so an explicit Home-app refresh during a pending request may briefly read the target instead of the actual state; the next report corrects it.
-* Keep the device's capability set stable: HomeKitty removes and re-adds the accessory when a device's capabilities change, which resets its HomeKit room/automation assignments.
-
-ObstructionDetected: HomeKitty's mapping optionally wires it to an `alarm_generic` capability. This app does not include it in v0.1 (it would show a permanent alarm sensor on the device for a state nothing reports yet); it is a candidate for a future version — with the accessory-reset caveat above in mind.
-
-## Persistence
-
-The reported state survives app restarts and Homey reboots. On startup the device restores the **last reported state** — it does not verify the physical door and it never emits open/close requests by itself. Because requests are rejected rather than committed, a restart can never resurrect an unconfirmed request either. If your hardware may have moved while Homey was down, let your Flows report the state again (e.g. a Flow triggered by the sensor, or a periodic sync Flow).
-
-## Pairing
-
-1. Devices → Add device → Virtual Garage Door.
-2. Add it, give it a name.
-3. Done — add as many virtual garage doors as you like.
+* **States** are `Closed`, `Opening`, `Open`, `Closing` and `Stopped` (didn't reach an endpoint / position uncertain). The device tile shows the full state; the standard *Closed* toggle reflects only fully-closed.
+* **Persistence:** the state survives restarts and reboots. Flow mode restores the last *reported* state; Managed mode re-checks the sensors. Neither mode ever generates open/close commands by itself at startup.
+* **Warnings** on the device (yellow banner) mean: sensors contradict each other, the door missed its travel window, or a configured device is missing — the warning text says which, and *Repair* fixes configuration issues.
+* **Safety:** the only thing this app ever does to your hardware is switch the control device **on** when you ask the door to move (Managed mode). Pulse length, interlocks and anything more belong to the relay and your own setup. In Flow mode it touches nothing at all.
+* **Multiple doors:** add as many devices as you like; each has its own mode and configuration.
 
 ## Installation
 
@@ -142,31 +122,23 @@ Install with the [Homey CLI](https://apps.developer.homey.app/the-basics/getting
 
 ```sh
 npm install --global homey   # the Homey CLI
-npm install                  # dev dependencies; also generates the PNG images
+npm install                  # dependencies; also generates the PNG images
 homey login
 homey app install
 ```
 
 > The PNG images referenced by the app manifest are generated deterministically
-> by `scripts/generate-images.js` (Node built-ins only) when you run
-> `npm install` (the `prepare` script), so the repository itself stays text-only.
+> by `scripts/generate-images.js` (Node built-ins only) during `npm install`,
+> so the repository stays text-only.
 
 ## Development
 
 ```sh
-npm install        # dev dependencies (Jest)
-npm test           # unit tests
+npm install        # dependencies (homey-api) + dev dependencies (Jest)
+npm test           # 95 unit tests
 npm run validate   # homey app validate --level publish (requires the Homey CLI)
 ```
 
-The tests mock the `homey` runtime module (`test/mocks/homey.js`) and simulate Homey Core's contract for capability listeners — commit on resolve, discard on reject — so the request/report state machine is exercised exactly as it behaves on a real Homey. `test/manifest.test.js` additionally guards against drift between the compose files and the code (for example a Flow dropdown state the device would reject).
+The Managed-mode logic lives in `lib/garage-state-machine.js` as a pure reducer (no timers, no I/O), exhaustively covered by `test/garage-state-machine.test.js` — one sensor, two sensors, manual operation, timeouts, restart reconciliation, conflicting sensors and command guarding. `test/device-managed.test.js` exercises the Homey wiring against a mocked Homey Web API (`homey-api`), `test/device.test.js` covers Flow mode's request/report contract, and `test/manifest.test.js` guards against drift between the compose files and the code.
 
-## Safety
-
-This app never autonomously operates physical hardware. It only:
-
-1. represents the virtual garage door,
-2. emits requested state changes as Flow triggers,
-3. accepts reported state changes from Flow actions.
-
-Whatever pulses your relay — and whatever decides it is safe to do so — is your Advanced Flow, where you can see and change it.
+Cross-device access (Managed mode) uses the official [`homey-api`](https://www.npmjs.com/package/homey-api) client with the `homey:manager:api` permission: `makeCapabilityInstance` for realtime sensor updates and `setCapabilityValue` for the relay pulse — the same mechanism HomeKitty uses.

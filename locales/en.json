@@ -1,9 +1,47 @@
 {
   "pair": {
-    "defaultName": "Virtual Garage Door"
+    "defaultName": "Virtual Garage Door",
+    "mode": {
+      "title": "How should this garage door work?",
+      "managedTitle": "Managed — no Flows needed",
+      "managedDesc": "Pick the relay that triggers your door and the sensor that detects it is closed. The app operates the door and tracks its state itself.",
+      "flowTitle": "Flow controlled",
+      "flowDesc": "Your own Advanced Flows respond to open/close requests, operate the hardware and report the door state back. Maximum control."
+    },
+    "config": {
+      "loading": "Loading your devices…",
+      "control": "Which device triggers the door?",
+      "controlHint": "Usually the relay wired to your garage opener (for example a Shelly). Configure the relay itself to switch off automatically (momentary / auto-off) — this app only switches it on.",
+      "closed": "Which sensor detects that the door is fully closed?",
+      "closedMeaning": "The door is fully closed when this sensor reports:",
+      "open": "Which sensor detects that the door is fully open? (optional)",
+      "openMeaning": "The door is fully open when this sensor reports:",
+      "meaningDefault": "Contact closed / switch on (default)",
+      "meaningInverted": "Contact open / switch off",
+      "none": "None",
+      "travel": "Expected travel time (seconds)",
+      "travelHint": "Time your door and add 10–20% margin. Example: the door takes ~15 seconds, so enter 18.",
+      "save": "Continue",
+      "saveRepair": "Save"
+    }
   },
   "request": {
     "open": "Open requested — waiting for a Flow to report the actual state.",
-    "close": "Close requested — waiting for a Flow to report the actual state."
+    "close": "Close requested — waiting for a Flow to report the actual state.",
+    "opening": "Opening the garage door…",
+    "closing": "Closing the garage door…",
+    "already_open": "The garage door is already open.",
+    "already_closed": "The garage door is already closed.",
+    "already_moving": "The garage door is already moving — wait until it finishes.",
+    "sensor_conflict": "Both sensors report an endpoint at the same time — check the sensor configuration.",
+    "not_configured": "Managed mode is not configured — use 'Repair' on this device to select your relay and sensors.",
+    "control_failed": "The control device could not be switched — check that it is available."
+  },
+  "warning": {
+    "sensor_conflict": "Both sensors report an endpoint at the same time. Check the sensors and their 'closed/open when' settings.",
+    "not_reached_open": "The door did not reach the open position within the expected travel time.",
+    "not_reached_closed": "The door did not reach the closed position within the expected travel time.",
+    "not_configured": "Managed mode is not configured. Use 'Repair' on this device to select your relay and sensors.",
+    "missing_device": "A configured device was removed or cannot be found. Use 'Repair' on this device to fix the configuration."
   }
 }

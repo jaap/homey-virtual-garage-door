@@ -1,0 +1,162 @@
+<style>
+  .vgd-form { display: flex; flex-direction: column; gap: 14px; padding: 8px 4px; font-size: 14px; }
+  .vgd-field label { display: block; font-weight: 600; margin-bottom: 4px; }
+  .vgd-field select, .vgd-field input {
+    width: 100%; padding: 8px 10px; font: inherit; color: inherit;
+    border: 1px solid rgba(0, 0, 0, 0.2); border-radius: 8px; background: transparent; box-sizing: border-box;
+  }
+  .vgd-hint { font-size: 12px; opacity: 0.7; margin-top: 4px; line-height: 1.4; }
+  .vgd-save {
+    margin-top: 4px; padding: 12px; font: inherit; font-weight: 600; cursor: pointer;
+    border: none; border-radius: 8px; background: #2e56b5; color: #fff;
+  }
+  .vgd-save:disabled { opacity: 0.5; cursor: default; }
+  .vgd-loading { text-align: center; opacity: 0.7; padding: 24px 0; }
+</style>
+
+<div class="vgd-loading" id="vgd-loading" data-i18n="pair.config.loading">Loading your devices…</div>
+
+<div class="vgd-form" id="vgd-form" style="display: none">
+  <div class="vgd-field">
+    <label for="vgd-control" data-i18n="pair.config.control">Which device triggers the door?</label>
+    <select id="vgd-control"></select>
+    <div class="vgd-hint" data-i18n="pair.config.controlHint">Usually the relay wired to your garage opener (for example a Shelly). Configure the relay itself to switch off automatically (momentary / auto-off) — this app only switches it on.</div>
+  </div>
+
+  <div class="vgd-field">
+    <label for="vgd-closed" data-i18n="pair.config.closed">Which sensor detects that the door is fully closed?</label>
+    <select id="vgd-closed"></select>
+  </div>
+
+  <div class="vgd-field">
+    <label for="vgd-closed-meaning" data-i18n="pair.config.closedMeaning">The door is fully closed when this sensor reports:</label>
+    <select id="vgd-closed-meaning">
+      <option value="default" data-i18n="pair.config.meaningDefault">Contact closed / switch on (default)</option>
+      <option value="inverted" data-i18n="pair.config.meaningInverted">Contact open / switch off</option>
+    </select>
+  </div>
+
+  <div class="vgd-field">
+    <label for="vgd-open" data-i18n="pair.config.open">Which sensor detects that the door is fully open? (optional)</label>
+    <select id="vgd-open"></select>
+  </div>
+
+  <div class="vgd-field" id="vgd-open-meaning-field" style="display: none">
+    <label for="vgd-open-meaning" data-i18n="pair.config.openMeaning">The door is fully open when this sensor reports:</label>
+    <select id="vgd-open-meaning">
+      <option value="default" data-i18n="pair.config.meaningDefault">Contact closed / switch on (default)</option>
+      <option value="inverted" data-i18n="pair.config.meaningInverted">Contact open / switch off</option>
+    </select>
+  </div>
+
+  <div class="vgd-field">
+    <label for="vgd-travel" data-i18n="pair.config.travel">Expected travel time (seconds)</label>
+    <input id="vgd-travel" type="number" min="5" max="120" step="1" value="20" />
+    <div class="vgd-hint" data-i18n="pair.config.travelHint">Time your door and add 10–20% margin. Example: the door takes ~15 seconds, so enter 18.</div>
+  </div>
+
+  <button class="vgd-save" id="vgd-save" type="button" data-i18n="pair.config.saveRepair">Save</button>
+</div>
+
+<script type="text/javascript">
+  (function initRepairConfigView() {
+    document.querySelectorAll('[data-i18n]').forEach(function translate(el) {
+      var text = Homey.__(el.getAttribute('data-i18n'));
+      if (text && text !== el.getAttribute('data-i18n')) el.textContent = text;
+    });
+
+    var sensorsById = [];
+
+    function option(value, label) {
+      var el = document.createElement('option');
+      el.value = value;
+      el.textContent = label;
+      return el;
+    }
+
+    function sensorLabel(sensor) {
+      var zone = sensor.zone ? ' (' + sensor.zone + ')' : '';
+      return sensor.deviceName + ' — ' + sensor.capabilityTitle + zone;
+    }
+
+    function fillSensorSelect(select, sensors, includeNone) {
+      if (includeNone) select.appendChild(option('', Homey.__('pair.config.none') || 'None'));
+      sensors.forEach(function add(sensor, index) {
+        select.appendChild(option(String(index), sensorLabel(sensor)));
+      });
+    }
+
+    function sensorIndex(sensors, ref) {
+      if (!ref) return -1;
+      return sensors.findIndex(function match(sensor) {
+        return sensor.deviceId === ref.id && sensor.capabilityId === ref.capability;
+      });
+    }
+
+    Promise.all([Homey.emit('get_pair_data'), Homey.emit('get_current_config')])
+      .then(function onData(results) {
+        var data = results[0];
+        var current = results[1] || {};
+
+        var controlSelect = document.getElementById('vgd-control');
+        data.controls.forEach(function add(control) {
+          var zone = control.zone ? ' (' + control.zone + ')' : '';
+          controlSelect.appendChild(option(control.deviceId, control.name + zone));
+        });
+        if (current.controlDevice) controlSelect.value = current.controlDevice.id;
+
+        sensorsById = data.sensors;
+        fillSensorSelect(document.getElementById('vgd-closed'), data.sensors, false);
+        fillSensorSelect(document.getElementById('vgd-open'), data.sensors, true);
+
+        var closedIndex = sensorIndex(data.sensors, current.closedSensor);
+        if (closedIndex >= 0) document.getElementById('vgd-closed').value = String(closedIndex);
+        var openIndex = sensorIndex(data.sensors, current.openSensor);
+        if (openIndex >= 0) {
+          document.getElementById('vgd-open').value = String(openIndex);
+          document.getElementById('vgd-open-meaning-field').style.display = '';
+        }
+
+        document.getElementById('vgd-closed-meaning').value = current.closedSensorMeaning || 'default';
+        document.getElementById('vgd-open-meaning').value = current.openSensorMeaning || 'default';
+        if (current.travelTime) document.getElementById('vgd-travel').value = current.travelTime;
+
+        document.getElementById('vgd-loading').style.display = 'none';
+        document.getElementById('vgd-form').style.display = '';
+      })
+      .catch(function onError(err) {
+        Homey.alert((err && err.message) || String(err));
+      });
+
+    document.getElementById('vgd-open').addEventListener('change', function toggleOpenMeaning() {
+      document.getElementById('vgd-open-meaning-field').style.display = this.value === '' ? 'none' : '';
+    });
+
+    document.getElementById('vgd-save').addEventListener('click', function save() {
+      var button = this;
+      var closedIndex = document.getElementById('vgd-closed').value;
+      var openIndex = document.getElementById('vgd-open').value;
+      var closedSensor = sensorsById[Number(closedIndex)];
+      var openSensor = openIndex === '' ? null : sensorsById[Number(openIndex)];
+
+      var config = {
+        controlDevice: { id: document.getElementById('vgd-control').value },
+        closedSensor: closedSensor ? { id: closedSensor.deviceId, capability: closedSensor.capabilityId } : null,
+        openSensor: openSensor ? { id: openSensor.deviceId, capability: openSensor.capabilityId } : null,
+        closedSensorMeaning: document.getElementById('vgd-closed-meaning').value,
+        openSensorMeaning: document.getElementById('vgd-open-meaning').value,
+        travelTime: Number(document.getElementById('vgd-travel').value),
+      };
+
+      button.disabled = true;
+      Homey.emit('set_managed_config', config)
+        .then(function finish() {
+          Homey.done();
+        })
+        .catch(function onError(err) {
+          button.disabled = false;
+          Homey.alert((err && err.message) || String(err));
+        });
+    });
+  })();
+</script>

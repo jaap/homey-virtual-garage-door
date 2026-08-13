@@ -1,0 +1,139 @@
+[
+  {
+    "type": "group",
+    "label": {
+      "en": "Mode",
+      "nl": "Modus"
+    },
+    "children": [
+      {
+        "id": "mode",
+        "type": "dropdown",
+        "label": {
+          "en": "Operating mode",
+          "nl": "Bedieningsmodus"
+        },
+        "value": "flow",
+        "values": [
+          {
+            "id": "flow",
+            "label": {
+              "en": "Flow controlled — your Flows handle everything",
+              "nl": "Flow-gestuurd — je Flows regelen alles"
+            }
+          },
+          {
+            "id": "managed",
+            "label": {
+              "en": "Managed — the app operates your relay and sensors",
+              "nl": "Beheerd — de app bedient je relais en sensoren"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Managed mode needs a configured control device and closed sensor. If they were not set up during pairing, use 'Repair' from the device menu to configure them.",
+          "nl": "Beheerde modus vereist een geconfigureerd bedieningsapparaat en gesloten-sensor. Zijn deze niet ingesteld tijdens het toevoegen, gebruik dan 'Herstellen' in het apparaatmenu."
+        }
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Managed mode",
+      "nl": "Beheerde modus"
+    },
+    "children": [
+      {
+        "id": "managed_devices_summary",
+        "type": "label",
+        "label": {
+          "en": "Configured devices",
+          "nl": "Geconfigureerde apparaten"
+        },
+        "value": "—",
+        "hint": {
+          "en": "Change the selected devices via 'Repair' in the device menu.",
+          "nl": "Wijzig de geselecteerde apparaten via 'Herstellen' in het apparaatmenu."
+        }
+      },
+      {
+        "id": "travel_time",
+        "type": "number",
+        "label": {
+          "en": "Expected travel time",
+          "nl": "Verwachte looptijd"
+        },
+        "value": 20,
+        "min": 5,
+        "max": 120,
+        "units": {
+          "en": "seconds",
+          "nl": "seconden"
+        },
+        "hint": {
+          "en": "Time the door needs to fully open or close, plus 10–20% margin. Example: door takes ~15 seconds, set 18.",
+          "nl": "Tijd die de deur nodig heeft om volledig te openen of sluiten, plus 10–20% marge. Voorbeeld: deur doet er ~15 seconden over, stel 18 in."
+        }
+      },
+      {
+        "id": "closed_sensor_meaning",
+        "type": "dropdown",
+        "label": {
+          "en": "The door is fully closed when the closed sensor reports",
+          "nl": "De deur is volledig gesloten wanneer de gesloten-sensor meldt"
+        },
+        "value": "default",
+        "values": [
+          {
+            "id": "default",
+            "label": {
+              "en": "Contact closed / switch on (default)",
+              "nl": "Contact gesloten / schakelaar aan (standaard)"
+            }
+          },
+          {
+            "id": "inverted",
+            "label": {
+              "en": "Contact open / switch off",
+              "nl": "Contact open / schakelaar uit"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Change this if the device shows Open while the door is actually closed.",
+          "nl": "Wijzig dit als het apparaat Open toont terwijl de deur eigenlijk gesloten is."
+        }
+      },
+      {
+        "id": "open_sensor_meaning",
+        "type": "dropdown",
+        "label": {
+          "en": "The door is fully open when the open sensor reports",
+          "nl": "De deur is volledig open wanneer de open-sensor meldt"
+        },
+        "value": "default",
+        "values": [
+          {
+            "id": "default",
+            "label": {
+              "en": "Contact closed / switch on (default)",
+              "nl": "Contact gesloten / schakelaar aan (standaard)"
+            }
+          },
+          {
+            "id": "inverted",
+            "label": {
+              "en": "Contact open / switch off",
+              "nl": "Contact open / schakelaar uit"
+            }
+          }
+        ],
+        "hint": {
+          "en": "Only used when an open sensor is configured.",
+          "nl": "Alleen gebruikt wanneer een open-sensor is geconfigureerd."
+        }
+      }
+    ]
+  }
+]

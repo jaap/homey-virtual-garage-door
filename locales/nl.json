@@ -1,9 +1,47 @@
 {
   "pair": {
-    "defaultName": "Virtuele garagedeur"
+    "defaultName": "Virtuele garagedeur",
+    "mode": {
+      "title": "Hoe moet deze garagedeur werken?",
+      "managedTitle": "Beheerd — geen Flows nodig",
+      "managedDesc": "Kies het relais dat je deur aanstuurt en de sensor die detecteert dat de deur dicht is. De app bedient de deur en houdt zelf de status bij.",
+      "flowTitle": "Flow-gestuurd",
+      "flowDesc": "Je eigen Advanced Flows reageren op open/sluit-verzoeken, bedienen de hardware en rapporteren de deurstatus terug. Maximale controle."
+    },
+    "config": {
+      "loading": "Apparaten laden…",
+      "control": "Welk apparaat stuurt de deur aan?",
+      "controlHint": "Meestal het relais dat op je garagedeuropener is aangesloten (bijvoorbeeld een Shelly). Stel het relais zelf in om automatisch uit te schakelen (puls / auto-uit) — deze app schakelt het alleen in.",
+      "closed": "Welke sensor detecteert dat de deur volledig dicht is?",
+      "closedMeaning": "De deur is volledig dicht wanneer deze sensor meldt:",
+      "open": "Welke sensor detecteert dat de deur volledig open is? (optioneel)",
+      "openMeaning": "De deur is volledig open wanneer deze sensor meldt:",
+      "meaningDefault": "Contact gesloten / schakelaar aan (standaard)",
+      "meaningInverted": "Contact open / schakelaar uit",
+      "none": "Geen",
+      "travel": "Verwachte looptijd (seconden)",
+      "travelHint": "Meet hoe lang de deur erover doet en tel er 10–20% bij op. Voorbeeld: de deur doet er ~15 seconden over, vul 18 in.",
+      "save": "Doorgaan",
+      "saveRepair": "Opslaan"
+    }
   },
   "request": {
     "open": "Openen gevraagd — wacht tot een Flow de werkelijke status rapporteert.",
-    "close": "Sluiten gevraagd — wacht tot een Flow de werkelijke status rapporteert."
+    "close": "Sluiten gevraagd — wacht tot een Flow de werkelijke status rapporteert.",
+    "opening": "De garagedeur wordt geopend…",
+    "closing": "De garagedeur wordt gesloten…",
+    "already_open": "De garagedeur is al open.",
+    "already_closed": "De garagedeur is al dicht.",
+    "already_moving": "De garagedeur is al in beweging — wacht tot deze klaar is.",
+    "sensor_conflict": "Beide sensoren melden tegelijk een eindpunt — controleer de sensorconfiguratie.",
+    "not_configured": "Beheerde modus is niet geconfigureerd — gebruik 'Herstellen' op dit apparaat om je relais en sensoren te kiezen.",
+    "control_failed": "Het bedieningsapparaat kon niet worden geschakeld — controleer of het bereikbaar is."
+  },
+  "warning": {
+    "sensor_conflict": "Beide sensoren melden tegelijk een eindpunt. Controleer de sensoren en hun 'dicht/open wanneer'-instellingen.",
+    "not_reached_open": "De deur heeft de open-positie niet binnen de verwachte looptijd bereikt.",
+    "not_reached_closed": "De deur heeft de dicht-positie niet binnen de verwachte looptijd bereikt.",
+    "not_configured": "Beheerde modus is niet geconfigureerd. Gebruik 'Herstellen' op dit apparaat om je relais en sensoren te kiezen.",
+    "missing_device": "Een geconfigureerd apparaat is verwijderd of onvindbaar. Gebruik 'Herstellen' op dit apparaat om de configuratie te herstellen."
   }
 }

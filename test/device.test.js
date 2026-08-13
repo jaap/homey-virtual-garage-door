@@ -96,17 +96,28 @@ describe('VirtualGarageDoorDevice', () => {
   });
 
   describe('requests through the request action cards', () => {
-    test('requestState fires the matching trigger without touching any state', async () => {
+    test('request() fires the matching trigger without touching any state', async () => {
       const device = createDevice();
       await device.onInit();
 
-      device.requestState('open');
-      device.requestState('close');
+      await device.request('open');
+      await device.request('close');
 
       expect(device._triggered.map(t => t.id)).toEqual(['open_requested', 'close_requested']);
       expect(device._caps.garagedoor_closed).toBe(true);
       expect(device._caps.garagedoor_state).toBe('closed');
       expect(device._store.reportedState).toBe('closed');
+    });
+  });
+
+  describe('mode migration', () => {
+    test('devices from before Managed mode existed migrate to flow mode', async () => {
+      const device = createDevice();
+      delete device._settings.mode;
+      await device.onInit();
+
+      expect(device.setSettings).toHaveBeenCalledWith({ mode: 'flow' });
+      expect(device._settings.mode).toBe('flow');
     });
   });
 
@@ -116,6 +127,7 @@ describe('VirtualGarageDoorDevice', () => {
       ['opening', false],
       ['open', false],
       ['closing', false],
+      ['stopped', false],
     ])('reporting %s sets garagedoor_closed to %s', async (state, closed) => {
       const device = createDevice();
       await device.onInit();
