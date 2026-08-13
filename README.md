@@ -193,6 +193,20 @@ The core logic lives in two pure reducers (no timers, no I/O): `lib/garage-state
 
 Cross-device access (Managed mode) uses the official [`homey-api`](https://www.npmjs.com/package/homey-api) client with the `homey:manager:api` permission: `makeCapabilityInstance` for realtime sensor updates and `setCapabilityValue` for the relay pulse — the same mechanism HomeKitty uses.
 
+## Releasing to the Homey App Store
+
+Publishing a GitHub release ships that build to the Homey App Store automatically (`.github/workflows/publish.yml`).
+
+One-time setup: create a Personal Access Token at [tools.developer.homey.app/me](https://tools.developer.homey.app/me) and add it as the repository secret **`HOMEY_PAT`** (Settings → Secrets and variables → Actions).
+
+Per release:
+
+1. `npm run set-version 0.6.0` — updates the version everywhere it lives — then commit, push, and wait for CI to go green.
+2. Create a GitHub release with tag **`v0.6.0`** (must match the version — the workflow refuses mismatches). The release notes become the App Store changelog.
+3. The workflow tests, validates and publishes the build as a **draft** to the [developer dashboard](https://tools.developer.homey.app/apps), where you promote it:
+   * **Test** — live immediately, installable by anyone with the link `https://homey.app/a/com.jaap.virtualgaragedoor/test/`. This is also the easiest way to update your own Homey over the air, no CLI needed.
+   * **Live** — requires Athom certification; expect a longer review because of the `homey:manager:api` permission.
+
 ## License
 
 [MIT](LICENSE) — free to use, fork, modify and redistribute, commercially or otherwise. No warranty, no liability; see the disclaimer at the top. If you build something better on top of it, enjoy.

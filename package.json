@@ -7,7 +7,8 @@
   "scripts": {
     "prepare": "node scripts/generate-images.js",
     "test": "jest",
-    "validate": "homey app validate --level publish"
+    "validate": "homey app validate --level publish",
+    "set-version": "node scripts/set-version.js"
   },
   "devDependencies": {
     "jest": "^30.4.2"
