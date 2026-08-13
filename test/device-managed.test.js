@@ -114,7 +114,7 @@ describe('VirtualGarageDoorDevice — Managed mode', () => {
       expect(pulseCount(control)).toBe(0);
     });
 
-    test('a failing control device surfaces an error and the door later times out honestly', async () => {
+    test('a failing control device surfaces an error, then the timeout settles back to CLOSED', async () => {
       const { device, control } = createManagedDevice();
       await device.onInit();
       control.setCapabilityValue.mockRejectedValue(new Error('offline'));
@@ -124,10 +124,12 @@ describe('VirtualGarageDoorDevice — Managed mode', () => {
 
       fireTravelTimer(device);
       await flush();
-      // one sensor: timeout after an open attempt infers OPEN — but the closed
-      // sensor never moved, so a later real report corrects it; the machine
-      // itself stays honest about what it can know
-      expect(device._caps.garagedoor_state).toBe('open');
+      // the closed sensor never released: the door did not move, so the
+      // machine settles honestly on CLOSED and reports the failed movement
+      expect(device._caps.garagedoor_state).toBe('closed');
+      expect(device._caps.garagedoor_closed).toBe(true);
+      expect(device.setWarning).toHaveBeenCalledWith('i18n:warning.not_reached_open');
+      expect(device._triggered.find(t => t.id === 'movement_failed').tokens).toEqual({ direction: 'opening' });
     });
   });
 
@@ -172,11 +174,13 @@ describe('VirtualGarageDoorDevice — Managed mode', () => {
     });
 
     test('two sensors: travel timeout while opening → STOPPED + warning + failure trigger', async () => {
-      const { device } = createManagedDevice({ withOpenSensor: true });
+      const { device, closedSensor } = createManagedDevice({ withOpenSensor: true });
       await device.onInit();
 
       await device.request('open');
-      fireTravelTimer(device);
+      closedSensor.push('alarm_contact', true); // door left the closed endpoint…
+      await flush();
+      fireTravelTimer(device); // …but never reached the open endpoint
       await flush();
 
       expect(device._caps.garagedoor_state).toBe('stopped');

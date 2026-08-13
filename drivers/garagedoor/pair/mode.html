@@ -27,9 +27,17 @@
 
 <script type="text/javascript">
   (function initModeView() {
+    function t(key, fallback) {
+      try {
+        if (typeof Homey !== 'undefined' && typeof Homey.__ === 'function') {
+          var text = Homey.__(key);
+          if (text && text !== key) return text;
+        }
+      } catch (err) { /* keep the built-in English fallback */ }
+      return fallback;
+    }
     document.querySelectorAll('[data-i18n]').forEach(function translate(el) {
-      var text = Homey.__(el.getAttribute('data-i18n'));
-      if (text && text !== el.getAttribute('data-i18n')) el.textContent = text;
+      el.textContent = t(el.getAttribute('data-i18n'), el.textContent);
     });
 
     document.getElementById('vgd-flow').addEventListener('click', function chooseFlow() {

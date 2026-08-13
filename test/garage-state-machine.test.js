@@ -57,6 +57,23 @@ describe('garage state machine', () => {
       expect(r.effects).toEqual([]);
     });
 
+    test('opening: OPEN is never inferred when the door never left the closed endpoint', () => {
+      // e.g. the pulse failed or the opener is jammed: the closed sensor
+      // still reports closed, so the door did not move at all
+      const opening = { phase: 'opening', closedActive: true, openActive: null };
+      const r = timeout(opening, ONE);
+      expect(r.state.phase).toBe('closed');
+      expect(r.effects).toContainEqual({ type: 'failed', direction: 'opening' });
+      expect(r.effects).toContainEqual({ type: 'warn', id: 'not_reached_open' });
+    });
+
+    test('two sensors: the same stuck-at-closed timeout settles CLOSED, not STOPPED', () => {
+      const opening = { phase: 'opening', closedActive: true, openActive: false };
+      const r = timeout(opening, TWO);
+      expect(r.state.phase).toBe('closed');
+      expect(r.effects).toContainEqual({ type: 'failed', direction: 'opening' });
+    });
+
     test('closing: closed sensor is authoritative for CLOSED', () => {
       const closing = { phase: 'closing', closedActive: false, openActive: null };
       const r = sensor(closing, 'closed', true);
