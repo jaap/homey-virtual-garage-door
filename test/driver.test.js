@@ -131,6 +131,34 @@ describe('VirtualGarageDoorDriver', () => {
       });
     });
 
+    test('the typed device name is used, with fallback to the default', async () => {
+      const driver = createDriver({ type: 'flow' });
+      const session = createPairSession();
+      await driver.onPair(session);
+
+      await session.handlers.set_name('  My Garage  ');
+      let [device] = await session.handlers.list_devices();
+      expect(device.name).toBe('My Garage');
+
+      await session.handlers.set_name('   ');
+      [device] = await session.handlers.list_devices();
+      expect(device.name).toBe('i18n:pair.defaultName');
+    });
+
+    test('managed and gate configs carry the typed name through', async () => {
+      const managed = createDriver({ type: 'managed' });
+      let session = createPairSession();
+      await managed.onPair(session);
+      await session.handlers.set_managed_config({ ...VALID_CONFIG, name: 'Garage Left' });
+      expect((await session.handlers.list_devices())[0].name).toBe('Garage Left');
+
+      const gate = createDriver({ type: 'gate' });
+      session = createPairSession();
+      await gate.onPair(session);
+      await session.handlers.set_gate_config({ ...VALID_GATE_CONFIG, name: 'Entrance Gate' });
+      expect((await session.handlers.list_devices())[0].name).toBe('Entrance Gate');
+    });
+
     test('every pairing session mints a unique device id', async () => {
       const driver = createDriver({ type: 'flow' });
       const session = createPairSession();
@@ -197,6 +225,7 @@ describe('VirtualGarageDoorDriver', () => {
       const result = driver.validateGateConfig({ ...VALID_GATE_CONFIG, gateOpeningTime: '3' });
       expect(result).toEqual({
         mode: 'gate',
+        name: null,
         controlDevice: { id: 'relay-1', capability: 'onoff' },
         gateOpeningTime: 3,
         gateHoldTime: 3,

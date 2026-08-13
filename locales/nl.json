@@ -22,7 +22,8 @@
       "travel": "Verwachte looptijd (seconden)",
       "travelHint": "Meet hoe lang de deur erover doet en tel er 10–20% bij op. Voorbeeld: de deur doet er ~15 seconden over, vul 18 in.",
       "save": "Doorgaan",
-      "saveRepair": "Opslaan"
+      "saveRepair": "Opslaan",
+      "name": "Apparaatnaam"
     },
     "gateName": "Zelfsluitende poort"
   },

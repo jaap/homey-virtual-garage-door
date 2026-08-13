@@ -1,0 +1,52 @@
+<style>
+  .vgd-form { display: flex; flex-direction: column; gap: 14px; padding: 8px 4px; font-size: 14px; }
+  .vgd-field label { display: block; font-weight: 600; margin-bottom: 4px; }
+  .vgd-field input {
+    width: 100%; padding: 8px 10px; font: inherit; color: inherit;
+    border: 1px solid rgba(0, 0, 0, 0.2); border-radius: 8px; background: transparent; box-sizing: border-box;
+  }
+  .vgd-save {
+    margin-top: 4px; padding: 12px; font: inherit; font-weight: 600; cursor: pointer;
+    border: none; border-radius: 8px; background: #2e56b5; color: #fff;
+  }
+</style>
+
+<div class="vgd-form">
+  <div class="vgd-field">
+    <label for="vgd-name" data-i18n="pair.config.name">Device name</label>
+    <input id="vgd-name" type="text" maxlength="50" />
+  </div>
+  <button class="vgd-save" id="vgd-save" type="button" data-i18n="pair.config.save">Continue</button>
+</div>
+
+<script type="text/javascript">
+  (function initNameView() {
+    function t(key, fallback) {
+      try {
+        if (typeof Homey !== 'undefined' && typeof Homey.__ === 'function') {
+          var text = Homey.__(key);
+          if (text && text !== key) return text;
+        }
+      } catch (err) { /* keep the built-in English fallback */ }
+      return fallback;
+    }
+    document.querySelectorAll('[data-i18n]').forEach(function translate(el) {
+      el.textContent = t(el.getAttribute('data-i18n'), el.textContent);
+    });
+
+    var input = document.getElementById('vgd-name');
+    input.value = t('pair.defaultName', 'Virtual Garage Door');
+    input.focus();
+    input.select();
+
+    document.getElementById('vgd-save').addEventListener('click', function save() {
+      Homey.emit('set_name', input.value)
+        .then(function next() {
+          Homey.showView('list_devices');
+        })
+        .catch(function onError(err) {
+          Homey.alert((err && err.message) || String(err));
+        });
+    });
+  })();
+</script>

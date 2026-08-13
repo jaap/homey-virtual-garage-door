@@ -22,7 +22,8 @@
       "travel": "Expected travel time (seconds)",
       "travelHint": "Time your door and add 10–20% margin. Example: the door takes ~15 seconds, so enter 18.",
       "save": "Continue",
-      "saveRepair": "Save"
+      "saveRepair": "Save",
+      "name": "Device name"
     },
     "gateName": "Auto-closing Gate"
   },

@@ -20,6 +20,11 @@
 
 <div class="vgd-form" id="vgd-form" style="display: none">
   <div class="vgd-field">
+    <label for="vgd-name" data-i18n="pair.config.name">Device name</label>
+    <input id="vgd-name" type="text" maxlength="50" />
+  </div>
+
+  <div class="vgd-field">
     <label for="vgd-control" data-i18n="pair.gate.control">Which device triggers the gate?</label>
     <select id="vgd-control"></select>
     <div class="vgd-hint" data-i18n="pair.config.controlHint">Usually the relay wired to your garage opener (for example a Shelly). Configure the relay itself to switch off automatically (momentary / auto-off) — this app only switches it on.</div>
@@ -58,6 +63,7 @@
     document.querySelectorAll('[data-i18n]').forEach(function translate(el) {
       el.textContent = t(el.getAttribute('data-i18n'), el.textContent);
     });
+    document.getElementById('vgd-name').value = t('pair.gateName', 'Virtual Garage Door');
 
     function option(value, label) {
       var el = document.createElement('option');
@@ -83,6 +89,7 @@
     document.getElementById('vgd-save').addEventListener('click', function save() {
       var button = this;
       var config = {
+        name: document.getElementById('vgd-name').value,
         controlDevice: { id: document.getElementById('vgd-control').value },
         gateOpeningTime: Number(document.getElementById('vgd-gate-opening').value),
         gateHoldTime: Number(document.getElementById('vgd-gate-hold').value),

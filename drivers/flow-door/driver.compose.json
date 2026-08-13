@@ -19,6 +19,9 @@
   },
   "pair": [
     {
+      "id": "name"
+    },
+    {
       "id": "list_devices",
       "template": "list_devices",
       "navigation": {

@@ -53,7 +53,7 @@ describe('app manifest', () => {
   });
 
   test('pairing flows per driver, with every custom view present on disk', () => {
-    expect(driverById('flow-door').pair.map(view => view.id)).toEqual(['list_devices', 'add_devices']);
+    expect(driverById('flow-door').pair.map(view => view.id)).toEqual(['name', 'list_devices', 'add_devices']);
     expect(driverById('managed-door').pair.map(view => view.id)).toEqual(['managed_config', 'list_devices', 'add_devices']);
     expect(driverById('gate').pair.map(view => view.id)).toEqual(['gate_config', 'list_devices', 'add_devices']);
     expect(driverById('managed-door').repair.map(view => view.id)).toEqual(['managed_config']);
@@ -61,6 +61,7 @@ describe('app manifest', () => {
     expect(driverById('flow-door').repair).toBeUndefined();
 
     for (const file of [
+      'drivers/flow-door/pair/name.html',
       'drivers/managed-door/pair/managed_config.html',
       'drivers/managed-door/repair/managed_config.html',
       'drivers/gate/pair/gate_config.html',

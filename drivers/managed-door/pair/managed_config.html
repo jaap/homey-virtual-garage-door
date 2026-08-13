@@ -18,6 +18,11 @@
 
 <div class="vgd-form" id="vgd-form" style="display: none">
   <div class="vgd-field">
+    <label for="vgd-name" data-i18n="pair.config.name">Device name</label>
+    <input id="vgd-name" type="text" maxlength="50" />
+  </div>
+
+  <div class="vgd-field">
     <label for="vgd-control" data-i18n="pair.config.control">Which device triggers the door?</label>
     <select id="vgd-control"></select>
     <div class="vgd-hint" data-i18n="pair.config.controlHint">Usually the relay wired to your garage opener (for example a Shelly). Configure the relay itself to switch off automatically (momentary / auto-off) — this app only switches it on.</div>
@@ -72,6 +77,7 @@
     document.querySelectorAll('[data-i18n]').forEach(function translate(el) {
       el.textContent = t(el.getAttribute('data-i18n'), el.textContent);
     });
+    document.getElementById('vgd-name').value = t('pair.defaultName', 'Virtual Garage Door');
 
     var sensorsById = [];
 
@@ -125,6 +131,7 @@
       var openSensor = openIndex === '' ? null : sensorsById[Number(openIndex)];
 
       var config = {
+        name: document.getElementById('vgd-name').value,
         controlDevice: { id: document.getElementById('vgd-control').value },
         closedSensor: closedSensor ? { id: closedSensor.deviceId, capability: closedSensor.capabilityId } : null,
         openSensor: openSensor ? { id: openSensor.deviceId, capability: openSensor.capabilityId } : null,
