@@ -149,8 +149,8 @@ function createApiDevice({ id, name = id, capabilities = {} }) {
   return fake;
 }
 
-/** Fake Homey Web API with a set of devices keyed by id. */
-function createApi(devicesById) {
+/** Fake Homey Web API with a set of devices keyed by id and Homey users. */
+function createApi(devicesById, { users = { owner: { id: 'owner', present: true } } } = {}) {
   return {
     devices: {
       getDevice: jest.fn(async ({ id }) => {
@@ -160,6 +160,9 @@ function createApi(devicesById) {
       getDevices: jest.fn(async () => devicesById),
       on: jest.fn(),
       off: jest.fn(),
+    },
+    users: {
+      getUsers: jest.fn(async () => users),
     },
   };
 }

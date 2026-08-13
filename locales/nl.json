@@ -44,6 +44,7 @@
     "already_moving": "De garagedeur is al in beweging — wacht tot deze klaar is.",
     "sensor_conflict": "Beide sensoren melden tegelijk een eindpunt — controleer de sensorconfiguratie.",
     "gate_auto_close": "Deze poort sluit vanzelf — hij kan alleen worden geopend.",
+    "nobody_home": "Openen is geblokkeerd omdat er niemand thuis is.",
     "not_configured": "Beheerde modus is niet geconfigureerd — gebruik 'Herstellen' op dit apparaat om je relais en sensoren te kiezen.",
     "control_failed": "Het bedieningsapparaat kon niet worden geschakeld — controleer of het bereikbaar is."
   },

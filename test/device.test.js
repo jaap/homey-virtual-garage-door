@@ -110,6 +110,52 @@ describe('VirtualGarageDoorDevice', () => {
     });
   });
 
+  describe('only open when someone is home', () => {
+    const { createApi } = require('./helpers');
+
+    test('blocks open requests before any trigger fires when nobody is home', async () => {
+      const api = createApi({}, { users: { a: { id: 'a', present: false }, b: { id: 'b', present: false } } });
+      const device = createDevice({ api, settings: { only_open_when_home: true } });
+      await device.onInit();
+
+      const viaTile = await requestViaCapability(device, 'garagedoor_closed', false);
+      expect(viaTile).toEqual({ rejected: true, message: 'i18n:request.nobody_home' });
+      await expect(device.request('open')).rejects.toThrow('i18n:request.nobody_home');
+
+      expect(device._triggered).toEqual([]); // Flows never hear a blocked request
+      expect(device._caps.garagedoor_closed).toBe(true);
+    });
+
+    test('closing is never blocked', async () => {
+      const api = createApi({}, { users: { a: { id: 'a', present: false } } });
+      const device = createDevice({ api, settings: { only_open_when_home: true } });
+      await device.onInit();
+      await device.setReportedState('open');
+
+      await device.request('close');
+
+      expect(device._triggered.map(t => t.id)).toEqual(['close_requested']);
+    });
+
+    test('allows opening when someone is home, and when presence cannot be determined', async () => {
+      const home = createDevice({
+        api: createApi({}, { users: { a: { id: 'a', present: false }, b: { id: 'b', present: true } } }),
+        settings: { only_open_when_home: true },
+      });
+      await home.onInit();
+      await home.request('open');
+      expect(home._triggered.map(t => t.id)).toEqual(['open_requested']);
+
+      const broken = createDevice({ api: createApi({}), settings: { only_open_when_home: true } });
+      broken.homey.app.getApi = jest.fn(async () => {
+        throw new Error('api unavailable');
+      });
+      await broken.onInit();
+      await broken.request('open'); // fail-open: never lock the user out
+      expect(broken._triggered.map(t => t.id)).toEqual(['open_requested']);
+    });
+  });
+
   describe('mode migration', () => {
     test('devices from before Managed mode existed migrate to flow mode', async () => {
       const device = createDevice();
@@ -124,7 +170,7 @@ describe('VirtualGarageDoorDevice', () => {
   describe('reports', () => {
     test.each([
       ['closed', true],
-      ['opening', false],
+      ['opening', true], // endpoint-hold: reads closed until (presumed) open
       ['open', false],
       ['closing', false],
       ['stopped', false],
@@ -170,7 +216,7 @@ describe('VirtualGarageDoorDevice', () => {
     expect(device._caps.garagedoor_closed).toBe(true); // request alone changes nothing
 
     await device.setReportedState('opening');
-    expect(device._caps.garagedoor_closed).toBe(false);
+    expect(device._caps.garagedoor_closed).toBe(true); // endpoint-hold: Apple keeps "Opening…"
     expect(device._caps.garagedoor_state).toBe('opening');
 
     await device.setReportedState('open');

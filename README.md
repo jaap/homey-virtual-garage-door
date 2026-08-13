@@ -121,17 +121,29 @@ Verified against HomeKitty 2.5.8 source. HomeKitty maps any device with class `g
 
 What you will see in Apple Home:
 
-* Tap **Open** in Apple Home: Home shows **"Opening…"** (its own rendering of target ≠ current) until the door's state actually changes to Open. This works because the app deliberately *rejects* the direct capability write after handling it as a request — HomeKitty swallows the rejection by design, keeping the transient alive. When the app later reports/confirms the state, both HomeKit characteristics update together.
-* Transitional honesty has limits inherited from the one-boolean mapping: `opening`, `closing` and `stopped` all read as "not closed", so Apple Home shows **Open** for anything that isn't fully closed, and movements initiated *outside* HomeKit jump straight between Closed and Open. HomeKitty never emits HomeKit's OPENING/CLOSING/STOPPED current-states, and device warnings don't reach HomeKit.
-* The custom `garagedoor_state` sensor is invisible to HomeKitty (extra capabilities are ignored by its mapper) and cannot break the mapping.
+* Tap **Open**: Home shows **"Opening…"** for the whole travel window, then "Open". Two mechanisms make this work: the app *rejects* the direct capability write after handling it as a request (HomeKitty swallows the rejection by design), and while the state is `opening` the `garagedoor_closed` value **holds at closed** until the door actually — or, with one sensor, presumably — arrives ("endpoint-hold"). An open sensor ends the window early; otherwise the travel time does.
+* Tap **Close**: Home shows **"Closing…"** until the closed sensor confirms, because the value stays "not closed" during the whole closing phase. This side needs no tricks.
+* Limits of the one-boolean mapping: `stopped` reads as "Open"; movements started *outside* HomeKit (wall button, remote) don't produce a transient — the tile stays on the old endpoint until the movement completes (a manually opened door reads "Closed" until it is fully open); HomeKitty never emits HomeKit's native OPENING/CLOSING/STOPPED current-states; and device warnings don't reach HomeKit.
+* The custom `garagedoor_state` sensor and the gate's button are invisible to HomeKitty (extra capabilities are ignored by its mapper) and cannot break the mapping.
 
 No HomeKit-specific code exists in this app; it simply exposes exactly the class + capability HomeKitty wants.
 
 ---
 
+## Only open when someone is home
+
+Every door and gate has a **Restrictions** setting: *"Only allow opening when someone is home"*. When enabled, the app checks Homey's user presence before acting on any open request — Apple Home, the device tile, the kick button, and the Flow request cards alike — and refuses with a clear message while nobody is home. The check runs *before* the request triggers fire, so in Flow controlled mode your Flows never even hear a blocked request.
+
+Worth knowing:
+
+* **Closing is never blocked** — you always want to be able to close, especially when away.
+* It governs this virtual device only; physical remotes and wall buttons are outside the app's reach.
+* If presence cannot be determined (API hiccup), opening is **allowed** — a glitch should never lock you out of your own garage.
+* If Apple Home shows a stuck "Opening…" after a blocked attempt, tap the tile once more to settle it back to Closed.
+
 ## Good to know
 
-* **States** are `Closed`, `Opening`, `Open`, `Closing` and `Stopped` (didn't reach an endpoint / position uncertain). The device tile shows the full state; the standard *Closed* toggle reflects only fully-closed.
+* **States** are `Closed`, `Opening`, `Open`, `Closing` and `Stopped` (didn't reach an endpoint / position uncertain). The device tile shows the full state. The standard *Closed* toggle holds its old value while opening (see the HomeKitty section), which also means Homey's built-in *Opened* trigger now fires when the door is fully open, not when it starts moving.
 * **Persistence:** the state survives restarts and reboots. Flow mode restores the last *reported* state; Managed mode re-checks the sensors. Neither mode ever generates open/close commands by itself at startup.
 * **Warnings** on the device (yellow banner) mean: sensors contradict each other, the door missed its travel window, or a configured device is missing — the warning text says which, and *Repair* fixes configuration issues.
 * **Safety:** the only thing this app ever does to your hardware is switch the control device **on** when you ask the door to move (Managed mode). Pulse length, interlocks and anything more belong to the relay and your own setup. In Flow mode it touches nothing at all.

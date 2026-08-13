@@ -79,7 +79,7 @@ describe('VirtualGarageDoorDevice — Managed mode', () => {
 
       expect(control.setCapabilityValue).toHaveBeenCalledWith({ capabilityId: 'onoff', value: true });
       expect(device._caps.garagedoor_state).toBe('opening');
-      expect(device._caps.garagedoor_closed).toBe(false);
+      expect(device._caps.garagedoor_closed).toBe(true); // endpoint-hold until (presumed) open
       expect(pendingTimers(device)).toHaveLength(1);
       expect(pendingTimers(device)[0].ms).toBe(18000);
       expect(device._triggered.map(t => t.id)).toEqual(['open_requested']);

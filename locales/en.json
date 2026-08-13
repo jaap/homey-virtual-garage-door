@@ -44,6 +44,7 @@
     "already_moving": "The garage door is already moving — wait until it finishes.",
     "sensor_conflict": "Both sensors report an endpoint at the same time — check the sensor configuration.",
     "gate_auto_close": "This gate closes by itself — it can only be opened.",
+    "nobody_home": "Opening is blocked because nobody is home.",
     "not_configured": "Managed mode is not configured — use 'Repair' on this device to select your relay and sensors.",
     "control_failed": "The control device could not be switched — check that it is available."
   },

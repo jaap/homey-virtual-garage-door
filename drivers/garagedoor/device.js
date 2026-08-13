@@ -393,6 +393,14 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
    * moving, already there, sensor conflict).
    */
   async request(direction, { viaCapability = false } = {}) {
+    // The only-open-when-home restriction guards every request path in
+    // every mode, and runs before the request triggers so Flows cannot act
+    // on a blocked request either. Closing is never restricted.
+    if (direction === 'open' && this.getSetting('only_open_when_home') === true && !(await this._someoneIsHome())) {
+      this.log('open request blocked: nobody is home');
+      throw new Error(this.homey.__('request.nobody_home'));
+    }
+
     const trigger = direction === 'close' ? this._closeRequestedTrigger : this._openRequestedTrigger;
     trigger.trigger(this).catch(this.error);
     this.log(`${direction} requested${viaCapability ? ' (via capability)' : ''}`);
@@ -437,6 +445,22 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
     }
   }
 
+  /**
+   * Whether any Homey user is currently marked present. On lookup failure
+   * the request is allowed: a presence hiccup must never lock the user out
+   * of their own garage.
+   */
+  async _someoneIsHome() {
+    try {
+      const api = await this.homey.app.getApi();
+      const users = Object.values(await api.users.getUsers());
+      return users.some(user => user.present === true);
+    } catch (err) {
+      this.error('presence check failed, allowing the request', err);
+      return true;
+    }
+  }
+
   // --------------------------------------------------------------- reports
 
   /**
@@ -463,7 +487,16 @@ module.exports = class VirtualGarageDoorDevice extends Homey.Device {
   async _applyPhase(phase) {
     await this.setStoreValue('reportedState', phase);
     await this.setCapabilityValue('garagedoor_state', phase);
-    await this.setCapabilityValue('garagedoor_closed', phase === 'closed');
+    // Endpoint-hold projection: while OPENING, garagedoor_closed keeps
+    // reading closed until the door actually (or presumably) arrives. With
+    // HomeKitty's boolean mapping this is what renders Apple Home's
+    // "Opening…" for the whole travel window (target open, current closed);
+    // CLOSING already renders "Closing…" because the value stays not-closed
+    // until the closed sensor confirms. The gate keeps the plain projection:
+    // its capability path commits the requested value on resolve, and its
+    // short simulated cycle is the visual feedback.
+    const closed = this.isGate() ? phase === 'closed' : phase === 'closed' || phase === 'opening';
+    await this.setCapabilityValue('garagedoor_closed', closed);
   }
 
   // ------------------------------------------------------- managed config
