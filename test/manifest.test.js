@@ -38,6 +38,15 @@ describe('app manifest', () => {
     expect(manifest.version).toBe(pkg.version);
   });
 
+  test('App Store description files exist', () => {
+    // `homey app publish` requires README.txt (the store page text), but
+    // `homey app validate --level publish` does not check for it.
+    for (const file of ['README.txt', 'README.nl.txt']) {
+      const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
+      expect(text.trim().length).toBeGreaterThan(100);
+    }
+  });
+
   test('exactly the three driver types exist, all garagedoor class', () => {
     expect(manifest.drivers.map(driver => driver.id).sort()).toEqual(DRIVER_IDS);
     for (const driver of manifest.drivers) {
