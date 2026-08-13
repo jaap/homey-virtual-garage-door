@@ -144,6 +144,21 @@ describe('VirtualGarageDoorDevice', () => {
       expect(device._caps.garagedoor_closed).toBe(true); // snapped back to closed
     });
 
+    test('presence is read fresh, never from the cached snapshot (regression)', async () => {
+      const api = createApi({}, { users: { a: { id: 'a', present: true } } });
+      const device = createDevice({ api, settings: { only_open_when_home: true } });
+      await device.onInit();
+
+      await device.request('open'); // someone is home: allowed
+      expect(device._triggered.map(t => t.id)).toEqual(['open_requested']);
+
+      api._users.a.present = false; // everyone leaves; only the live state changes
+
+      // fails if the code reads homey-api's cached snapshot (present: true)
+      await expect(device.request('open')).rejects.toThrow('i18n:request.nobody_home');
+      expect(device._triggered.map(t => t.id)).toEqual(['open_requested']); // no second trigger
+    });
+
     test('closing is never blocked', async () => {
       const api = createApi({}, { users: { a: { id: 'a', present: false } } });
       const device = createDevice({ api, settings: { only_open_when_home: true } });

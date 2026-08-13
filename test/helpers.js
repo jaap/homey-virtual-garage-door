@@ -156,8 +156,16 @@ function createApiDevice({ id, name = id, capabilities = {} }) {
   return fake;
 }
 
-/** Fake Homey Web API with a set of devices keyed by id and Homey users. */
+/**
+ * Fake Homey Web API with a set of devices keyed by id and Homey users.
+ * The users manager mimics homey-api's caching: without `$cache: false` it
+ * serves the snapshot taken at creation, so presence changes made through
+ * `api._users` are only visible to callers that request a fresh fetch —
+ * exactly the trap that caused the stale-presence bug.
+ */
 function createApi(devicesById, { users = { owner: { id: 'owner', present: true } } } = {}) {
+  const liveUsers = users;
+  const cachedSnapshot = JSON.parse(JSON.stringify(users));
   return {
     devices: {
       getDevice: jest.fn(async ({ id }) => {
@@ -169,8 +177,9 @@ function createApi(devicesById, { users = { owner: { id: 'owner', present: true 
       off: jest.fn(),
     },
     users: {
-      getUsers: jest.fn(async () => users),
+      getUsers: jest.fn(async opts => (opts && opts.$cache === false ? liveUsers : cachedSnapshot)),
     },
+    _users: liveUsers,
   };
 }
 
