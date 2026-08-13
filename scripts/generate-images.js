@@ -187,6 +187,18 @@ function encodePng(width, height, raw) {
 
 // --- main ----------------------------------------------------------------
 
+// Drivers removed from the repository leave their generated (gitignored)
+// images behind after a git pull, and the Homey CLI refuses to build while
+// a driver directory without a driver.compose.json exists. Prune such
+// leftovers, but never touch a directory that holds a real driver manifest.
+for (const leftover of ['garagedoor']) {
+  const dir = path.join(ROOT, 'drivers', leftover);
+  if (fs.existsSync(dir) && !fs.existsSync(path.join(dir, 'driver.compose.json'))) {
+    fs.rmSync(dir, { recursive: true, force: true });
+    console.log(`removed leftover drivers/${leftover} (generated assets from a removed driver)`);
+  }
+}
+
 for (const { file, width, height } of IMAGES) {
   const target = path.join(ROOT, file);
   fs.mkdirSync(path.dirname(target), { recursive: true });
