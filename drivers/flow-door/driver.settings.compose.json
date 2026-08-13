@@ -7,16 +7,39 @@
     },
     "children": [
       {
-        "id": "only_open_when_home",
-        "type": "checkbox",
+        "id": "open_restriction",
+        "type": "dropdown",
         "label": {
-          "en": "Only allow opening when someone is home",
-          "nl": "Alleen openen toestaan als er iemand thuis is"
+          "en": "Opening the door is…",
+          "nl": "De deur openen is…"
         },
-        "value": false,
+        "value": "always",
+        "values": [
+          {
+            "id": "always",
+            "label": {
+              "en": "Always allowed",
+              "nl": "Altijd toegestaan"
+            }
+          },
+          {
+            "id": "home_strict",
+            "label": {
+              "en": "Only allowed when someone is home — refused when Homey cannot tell",
+              "nl": "Alleen toegestaan als er iemand thuis is — geweigerd als Homey het niet weet"
+            }
+          },
+          {
+            "id": "home_lenient",
+            "label": {
+              "en": "Only allowed when someone is home — allowed when Homey cannot tell",
+              "nl": "Alleen toegestaan als er iemand thuis is — toegestaan als Homey het niet weet"
+            }
+          }
+        ],
         "hint": {
-          "en": "Blocks every open request through this device — Apple Home, the device tile, and Flow cards — while no Homey user is marked as home. Closing is never blocked, and physical remotes or wall buttons are outside this app's reach. If presence cannot be determined, opening is allowed.",
-          "nl": "Blokkeert elk openverzoek via dit apparaat — Apple Home, de apparaattegel en Flow-kaarten — zolang geen enkele Homey-gebruiker als thuis is gemarkeerd. Sluiten wordt nooit geblokkeerd, en fysieke afstandsbedieningen of muurknoppen vallen buiten deze app. Als aanwezigheid niet kan worden bepaald, wordt openen toegestaan."
+          "en": "Applies to every open request through this device — Apple Home, the device tile and Flow cards. Closing is never blocked, and physical remotes or wall buttons are outside this app's reach. \"Someone is home\" means at least one Homey user is marked as present.",
+          "nl": "Geldt voor elk openverzoek via dit apparaat — Apple Home, de apparaattegel en Flow-kaarten. Sluiten wordt nooit geblokkeerd, en fysieke afstandsbedieningen of muurknoppen vallen buiten deze app. \"Iemand thuis\" betekent dat minstens één Homey-gebruiker als aanwezig is gemarkeerd."
         }
       }
     ]

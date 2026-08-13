@@ -148,14 +148,20 @@ No HomeKit-specific code exists in this app; it simply exposes exactly the class
 
 ## Only open when someone is home
 
-Every door and gate has a **Restrictions** setting: *"Only allow opening when someone is home"*. When enabled, the app checks Homey's user presence before acting on any open request — Apple Home, the device tile, the kick button, and the Flow request cards alike — and refuses with a clear message while nobody is home. The check runs *before* the request triggers fire, so in Flow controlled mode your Flows never even hear a blocked request.
+Every door and gate has a **Restrictions** setting — *"Opening the door is…"* — with three choices:
+
+* **Always allowed** (default): no presence check at all.
+* **Only when someone is home — refused when Homey cannot tell**: the strict choice. If nobody is marked home, *or the presence lookup fails*, opening is refused with a clear message. Pick this when the restriction is a security measure that must not have gaps.
+* **Only when someone is home — allowed when Homey cannot tell**: the lenient choice. Blocks while nobody is home, but gives the benefit of the doubt when presence cannot be determined — a glitch never locks you out of your own garage.
+
+With either home-only choice, the app checks Homey's user presence before acting on any open request — Apple Home, the device tile, the kick button, and the Flow request cards alike. The check runs *before* the request triggers fire, so in Flow controlled mode your Flows never even hear a blocked request.
 
 Worth knowing:
 
 * **"Home" means Homey's own user presence** (set by the Homey app's location services or by toggling yourself home/away manually in the Homey app) — not your phone's Wi-Fi. Switching off Wi-Fi or location sharing does not mark you away; it just freezes your last known presence, so Homey most likely still considers you home. Test the restriction by setting yourself to Away in the Homey app.
-* **Closing is never blocked** — you always want to be able to close, especially when away.
+* **Closing is never blocked** — you always want to be able to close, especially when away. That also means the strict choice can never lock you out of *closing*; the worst case is having to open with your physical remote.
 * It governs this virtual device only; physical remotes and wall buttons are outside the app's reach.
-* If presence cannot be determined (API hiccup), opening is **allowed** — a glitch should never lock you out of your own garage.
+* Devices configured with the old checkbox are migrated automatically: checkbox on becomes the lenient choice (its documented behavior), checkbox off becomes *Always allowed*.
 * If Apple Home shows a stuck "Opening…" after a blocked attempt, tap the tile once more to settle it back to Closed.
 
 ## Good to know

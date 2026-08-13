@@ -110,12 +110,23 @@ describe('VirtualGarageDoorDevice', () => {
     });
   });
 
-  describe('only open when someone is home', () => {
+  describe('open restriction (only when someone is home)', () => {
     const { createApi } = require('./helpers');
+
+    test('"always" opens without ever touching the users API', async () => {
+      const api = createApi({}, { users: { a: { id: 'a', present: false } } });
+      const device = createDevice({ api, settings: { open_restriction: 'always' } });
+      await device.onInit();
+
+      await device.request('open');
+
+      expect(device._triggered.map(t => t.id)).toEqual(['open_requested']);
+      expect(api.users.getUsers).not.toHaveBeenCalled();
+    });
 
     test('blocks open requests before any trigger fires when nobody is home', async () => {
       const api = createApi({}, { users: { a: { id: 'a', present: false }, b: { id: 'b', present: false } } });
-      const device = createDevice({ api, settings: { only_open_when_home: true } });
+      const device = createDevice({ api, settings: { open_restriction: 'home_strict' } });
       await device.onInit();
 
       const viaTile = await requestViaCapability(device, 'garagedoor_closed', false);
@@ -131,7 +142,7 @@ describe('VirtualGarageDoorDevice', () => {
 
     test('a blocked capability open schedules the cache re-assert for Apple Home', async () => {
       const api = createApi({}, { users: { a: { id: 'a', present: false } } });
-      const device = createDevice({ api, settings: { only_open_when_home: true } });
+      const device = createDevice({ api, settings: { open_restriction: 'home_strict' } });
       await device.onInit();
 
       await requestViaCapability(device, 'garagedoor_closed', false);
@@ -146,7 +157,7 @@ describe('VirtualGarageDoorDevice', () => {
 
     test('presence is read fresh, never from the cached snapshot (regression)', async () => {
       const api = createApi({}, { users: { a: { id: 'a', present: true } } });
-      const device = createDevice({ api, settings: { only_open_when_home: true } });
+      const device = createDevice({ api, settings: { open_restriction: 'home_lenient' } });
       await device.onInit();
 
       await device.request('open'); // someone is home: allowed
@@ -159,9 +170,11 @@ describe('VirtualGarageDoorDevice', () => {
       expect(device._triggered.map(t => t.id)).toEqual(['open_requested']); // no second trigger
     });
 
-    test('closing is never blocked', async () => {
-      const api = createApi({}, { users: { a: { id: 'a', present: false } } });
-      const device = createDevice({ api, settings: { only_open_when_home: true } });
+    test('closing is never blocked, even under strict with a broken lookup', async () => {
+      const device = createDevice({ api: createApi({}), settings: { open_restriction: 'home_strict' } });
+      device.homey.app.getApi = jest.fn(async () => {
+        throw new Error('api unavailable');
+      });
       await device.onInit();
       await device.setReportedState('open');
 
@@ -170,22 +183,55 @@ describe('VirtualGarageDoorDevice', () => {
       expect(device._triggered.map(t => t.id)).toEqual(['close_requested']);
     });
 
-    test('allows opening when someone is home, and when presence cannot be determined', async () => {
-      const home = createDevice({
+    test('allows opening when someone is home', async () => {
+      const device = createDevice({
         api: createApi({}, { users: { a: { id: 'a', present: false }, b: { id: 'b', present: true } } }),
-        settings: { only_open_when_home: true },
+        settings: { open_restriction: 'home_strict' },
       });
-      await home.onInit();
-      await home.request('open');
-      expect(home._triggered.map(t => t.id)).toEqual(['open_requested']);
+      await device.onInit();
 
-      const broken = createDevice({ api: createApi({}), settings: { only_open_when_home: true } });
-      broken.homey.app.getApi = jest.fn(async () => {
-        throw new Error('api unavailable');
-      });
-      await broken.onInit();
-      await broken.request('open'); // fail-open: never lock the user out
-      expect(broken._triggered.map(t => t.id)).toEqual(['open_requested']);
+      await device.request('open');
+
+      expect(device._triggered.map(t => t.id)).toEqual(['open_requested']);
+    });
+
+    test('a failed lookup refuses the open under strict, allows it under lenient', async () => {
+      const brokenApi = () => {
+        const api = createApi({});
+        api.users.getUsers = jest.fn(async () => {
+          throw new Error('missing scopes');
+        });
+        return api;
+      };
+
+      const strict = createDevice({ api: brokenApi(), settings: { open_restriction: 'home_strict' } });
+      await strict.onInit();
+      const viaTile = await requestViaCapability(strict, 'garagedoor_closed', false);
+      expect(viaTile).toEqual({ rejected: true, message: 'i18n:request.presence_unknown' });
+      expect(strict._triggered).toEqual([]);
+
+      const lenient = createDevice({ api: brokenApi(), settings: { open_restriction: 'home_lenient' } });
+      await lenient.onInit();
+      await lenient.request('open'); // benefit of the doubt, by explicit choice
+      expect(lenient._triggered.map(t => t.id)).toEqual(['open_requested']);
+    });
+
+    test('the legacy checkbox migrates to the matching dropdown choice', async () => {
+      const api = createApi({}, { users: { a: { id: 'a', present: false } } });
+      const legacyOn = createDevice({ api, settings: { only_open_when_home: true } });
+      await legacyOn.onInit();
+
+      // old documented behavior = restricted but allowed on lookup failure
+      expect(legacyOn._settings.open_restriction).toBe('home_lenient');
+      await expect(legacyOn.request('open')).rejects.toThrow('i18n:request.nobody_home');
+
+      const legacyOff = createDevice({ settings: { only_open_when_home: false } });
+      await legacyOff.onInit();
+      expect(legacyOff._settings.open_restriction).toBe('always');
+
+      const explicit = createDevice({ settings: { open_restriction: 'home_strict', only_open_when_home: true } });
+      await explicit.onInit();
+      expect(explicit._settings.open_restriction).toBe('home_strict'); // never overwritten
     });
   });
 

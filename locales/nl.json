@@ -38,6 +38,7 @@
     "sensor_conflict": "Beide sensoren melden tegelijk een eindpunt — controleer de sensorconfiguratie.",
     "gate_auto_close": "Deze poort sluit vanzelf — hij kan alleen worden geopend.",
     "nobody_home": "Openen is geblokkeerd omdat er niemand thuis is.",
+    "presence_unknown": "Openen is geweigerd omdat Homey niet kon controleren of er iemand thuis is.",
     "not_configured": "Beheerde modus is niet geconfigureerd — gebruik 'Herstellen' op dit apparaat om je relais en sensoren te kiezen.",
     "control_failed": "Het bedieningsapparaat kon niet worden geschakeld — controleer of het bereikbaar is."
   },

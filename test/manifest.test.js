@@ -83,17 +83,28 @@ describe('app manifest', () => {
   test('settings per driver contain exactly the relevant knobs', () => {
     const settingIds = driver => driver.settings.flatMap(group => group.children.map(child => child.id)).sort();
 
-    expect(settingIds(driverById('flow-door'))).toEqual(['only_open_when_home']);
+    expect(settingIds(driverById('flow-door'))).toEqual(['open_restriction']);
     expect(settingIds(driverById('managed-door'))).toEqual([
-      'closed_sensor_meaning', 'managed_devices_summary', 'only_open_when_home', 'open_sensor_meaning', 'travel_time',
+      'closed_sensor_meaning', 'managed_devices_summary', 'open_restriction', 'open_sensor_meaning', 'travel_time',
     ].sort());
     expect(settingIds(driverById('gate'))).toEqual([
-      'gate_closing_time', 'gate_hold_time', 'gate_opening_time', 'managed_devices_summary', 'only_open_when_home',
+      'gate_closing_time', 'gate_hold_time', 'gate_opening_time', 'managed_devices_summary', 'open_restriction',
     ].sort());
 
     // no driver exposes a mode setting anymore — the driver type is the mode
     for (const driver of manifest.drivers) {
       expect(settingIds(driver)).not.toContain('mode');
+    }
+  });
+
+  test('the open restriction dropdown offers exactly the policies the code implements', () => {
+    for (const id of DRIVER_IDS) {
+      const setting = driverById(id).settings
+        .flatMap(group => group.children)
+        .find(child => child.id === 'open_restriction');
+      expect(setting.type).toBe('dropdown');
+      expect(setting.values.map(value => value.id)).toEqual(Object.values(VirtualDoorDevice.OPEN_RESTRICTIONS));
+      expect(setting.value).toBe(VirtualDoorDevice.OPEN_RESTRICTIONS.ALWAYS);
     }
   });
 
