@@ -4,6 +4,17 @@ Make your garage door a **real garage door in Homey** — even though it is actu
 
 Works with any hardware Homey can see: Shelly or other relays, Aqara/Zigbee/Z-Wave contact sensors, wired sensors — this app never talks to specific brands.
 
+## ⚠️ Disclaimer — use entirely at your own risk
+
+This app operates and reports on **physical access to your home**. Read this before wiring it to anything:
+
+* The software is provided **"as is", without warranty of any kind** (see [LICENSE](LICENSE)). The author accepts **no liability whatsoever** for anything this app does or fails to do — doors left open, doors that would not open, unexpected movement, missed or wrong states, a failed presence check, or Homey / HomeKitty / HomeKit behaving differently than this app assumes.
+* **A tile is software, not a lock.** Never treat "Closed" on a screen as proof that your door is closed, and never rely on this app as a security measure. If it matters, verify physically.
+* **Test your own setup thoroughly** — sensors, timings, restrictions, HomeKit behavior — before trusting it with anything you care about, and re-test after updates.
+* In short: if your garage door is left open all night, that is on you, not on this project. Don't come crying — come with a pull request.
+
+If you can't accept that, don't use this app. If you can: it's MIT-licensed, so you are free to fork it and do whatever you like with it.
+
 ## Three device types
 
 When you add a device, the app offers three separate types — each with only its own settings and setup steps:
@@ -179,3 +190,7 @@ npm run validate   # homey app validate --level publish (requires the Homey CLI)
 The core logic lives in two pure reducers (no timers, no I/O): `lib/garage-state-machine.js` for sensor-based Managed mode — one sensor, two sensors, manual operation, timeouts, restart reconciliation, conflicting sensors and command guarding — and `lib/gate-cycle-machine.js` for the simulated auto-closing gate cycle. `test/device-managed.test.js` and `test/device-gate.test.js` exercise the Homey wiring against a mocked Homey Web API (`homey-api`), `test/device.test.js` covers Flow mode's request/report contract, and `test/manifest.test.js` guards against drift between the compose files and the code.
 
 Cross-device access (Managed mode) uses the official [`homey-api`](https://www.npmjs.com/package/homey-api) client with the `homey:manager:api` permission: `makeCapabilityInstance` for realtime sensor updates and `setCapabilityValue` for the relay pulse — the same mechanism HomeKitty uses.
+
+## License
+
+[MIT](LICENSE) — free to use, fork, modify and redistribute, commercially or otherwise. No warranty, no liability; see the disclaimer at the top. If you build something better on top of it, enjoy.
