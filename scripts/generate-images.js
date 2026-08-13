@@ -1,9 +1,9 @@
 'use strict';
 
 /**
- * Generates the PNG images required by the Homey app manifest using only
- * Node.js built-ins, so the repository can stay text-only. Runs
- * automatically via the npm `prepare` script on `npm install`.
+ * Regenerates the PNG images required by the Homey app manifest (which are
+ * committed) using only Node.js built-ins — run `npm run images` after
+ * changing the artwork or brand color, then commit the result.
  *
  * The artwork mirrors assets/icon.svg: a white garage-door glyph centered
  * on the brand-color background at 52% of the image height, anti-aliased
@@ -187,10 +187,11 @@ function encodePng(width, height, raw) {
 
 // --- main ----------------------------------------------------------------
 
-// Drivers removed from the repository leave their generated (gitignored)
-// images behind after a git pull, and the Homey CLI refuses to build while
-// a driver directory without a driver.compose.json exists. Prune such
-// leftovers, but never touch a directory that holds a real driver manifest.
+// Checkouts from when the images were gitignored can still hold generated
+// images of since-removed drivers after a git pull, and the Homey CLI
+// refuses to build while a driver directory without a driver.compose.json
+// exists. Prune such leftovers, but never touch a directory that holds a
+// real driver manifest.
 for (const leftover of ['garagedoor']) {
   const dir = path.join(ROOT, 'drivers', leftover);
   if (fs.existsSync(dir) && !fs.existsSync(path.join(dir, 'driver.compose.json'))) {

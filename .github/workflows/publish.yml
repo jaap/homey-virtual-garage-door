@@ -4,11 +4,6 @@ name: Publish to Homey App Store
 # App Store (as a draft, to be promoted to Test/Live in the developer
 # dashboard). Requires the repository secret HOMEY_PAT — a Personal Access
 # Token from https://tools.developer.homey.app/me.
-#
-# Athom's official publish action is not used directly because its wrapper
-# runs `npm ci --ignore-scripts`, which skips the prepare script that
-# generates the manifest PNGs. These steps use the exact same
-# headless-publish contract the action wraps, with scripts enabled.
 
 on:
   release:
@@ -33,10 +28,8 @@ jobs:
             exit 1
           fi
 
-      - run: npm ci # also generates the manifest PNGs via prepare
+      - run: npm ci
       - run: npm test
-      - run: npm install --global homey
-      - run: homey app validate --level publish
 
       - name: Write the store changelog from the release notes
         env:
@@ -57,7 +50,6 @@ jobs:
           '
 
       - name: Publish
-        env:
-          HOMEY_HEADLESS: '1'
-          HOMEY_PAT: ${{ secrets.HOMEY_PAT }}
-        run: homey app publish
+        uses: athombv/github-action-homey-app-publish@master
+        with:
+          personal_access_token: ${{ secrets.HOMEY_PAT }}

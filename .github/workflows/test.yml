@@ -20,7 +20,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      # npm ci runs the prepare script too, generating the manifest PNGs
       - run: npm ci
       - run: npm test
 

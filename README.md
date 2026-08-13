@@ -172,14 +172,10 @@ Install with the [Homey CLI](https://apps.developer.homey.app/the-basics/getting
 
 ```sh
 npm install --global homey   # the Homey CLI
-npm install                  # dependencies; also generates the PNG images
+npm install                  # dependencies
 homey login
 homey app install
 ```
-
-> The PNG images referenced by the app manifest are generated deterministically
-> by `scripts/generate-images.js` (Node built-ins only) during `npm install`,
-> so the repository stays text-only.
 
 ## Development
 
@@ -187,6 +183,7 @@ homey app install
 npm install        # dependencies (homey-api) + dev dependencies (Jest)
 npm test           # unit tests
 npm run validate   # homey app validate --level publish (requires the Homey CLI)
+npm run images     # regenerate the manifest PNGs after changing the artwork
 ```
 
 The core logic lives in two pure reducers (no timers, no I/O): `lib/garage-state-machine.js` for sensor-based Managed mode — one sensor, two sensors, manual operation, timeouts, restart reconciliation, conflicting sensors and command guarding — and `lib/gate-cycle-machine.js` for the simulated auto-closing gate cycle. `test/device-managed.test.js` and `test/device-gate.test.js` exercise the Homey wiring against a mocked Homey Web API (`homey-api`), `test/device.test.js` covers Flow mode's request/report contract, and `test/manifest.test.js` guards against drift between the compose files and the code.
