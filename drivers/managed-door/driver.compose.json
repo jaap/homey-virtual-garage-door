@@ -1,0 +1,41 @@
+{
+  "name": {
+    "en": "Garage Door (Managed)",
+    "nl": "Garagedeur (Beheerd)"
+  },
+  "class": "garagedoor",
+  "capabilities": [
+    "garagedoor_closed",
+    "garagedoor_state"
+  ],
+  "platforms": [
+    "local"
+  ],
+  "connectivity": [],
+  "images": {
+    "small": "{{driverAssetsPath}}/images/small.png",
+    "large": "{{driverAssetsPath}}/images/large.png",
+    "xlarge": "{{driverAssetsPath}}/images/xlarge.png"
+  },
+  "pair": [
+    {
+      "id": "managed_config"
+    },
+    {
+      "id": "list_devices",
+      "template": "list_devices",
+      "navigation": {
+        "next": "add_devices"
+      }
+    },
+    {
+      "id": "add_devices",
+      "template": "add_devices"
+    }
+  ],
+  "repair": [
+    {
+      "id": "managed_config"
+    }
+  ]
+}

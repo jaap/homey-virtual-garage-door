@@ -1,0 +1,30 @@
+{
+  "title": {
+    "en": "The door state changed",
+    "nl": "De deurstatus is veranderd"
+  },
+  "hint": {
+    "en": "Starts whenever the door state changes. The tag contains the new state: closed, opening, open, closing or stopped.",
+    "nl": "Start wanneer de deurstatus verandert. De tag bevat de nieuwe status: closed, opening, open, closing of stopped."
+  },
+  "tokens": [
+    {
+      "name": "garagedoor_state",
+      "type": "string",
+      "title": {
+        "en": "State",
+        "nl": "Status"
+      },
+      "example": {
+        "en": "closed"
+      }
+    }
+  ],
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=flow-door|managed-door|gate"
+    }
+  ]
+}

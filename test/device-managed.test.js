@@ -51,7 +51,7 @@ describe('VirtualGarageDoorDevice — Managed mode', () => {
     });
 
     test('managed mode without configured devices warns and keeps the last state', async () => {
-      const device = createDevice({ settings: { mode: 'managed' }, store: { reportedState: 'open' } });
+      const device = createDevice({ type: 'managed', store: { reportedState: 'open' } });
       await device.onInit();
 
       expect(device.setWarning).toHaveBeenCalledWith('i18n:warning.not_configured');

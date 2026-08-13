@@ -1,0 +1,17 @@
+{
+  "title": {
+    "en": "Request to open",
+    "nl": "Vraag om te openen"
+  },
+  "hint": {
+    "en": "Asks the door to open, exactly like Apple Home or the device tile would. On Managed doors and gates this operates the door; on Flow controlled doors it starts the 'Open was requested' trigger.",
+    "nl": "Vraagt om de deur te openen, precies zoals Apple Home of de apparaattegel dat doet. Bij Beheerde deuren en poorten bedient dit de deur; bij Flow-gestuurde deuren start dit de trigger 'Openen werd gevraagd'."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=flow-door|managed-door|gate"
+    }
+  ]
+}

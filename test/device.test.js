@@ -1,6 +1,6 @@
 'use strict';
 
-const VirtualGarageDoorDevice = require('../drivers/garagedoor/device');
+const VirtualGarageDoorDevice = require('../lib/virtual-door-device');
 const { createDevice, requestViaCapability } = require('./helpers');
 
 const { STATES } = VirtualGarageDoorDevice;
@@ -156,14 +156,31 @@ describe('VirtualGarageDoorDevice', () => {
     });
   });
 
-  describe('mode migration', () => {
-    test('devices from before Managed mode existed migrate to flow mode', async () => {
+  describe('HomeKitty cache re-assert', () => {
+    test('a close request re-emits the sensor-anchored value shortly after', async () => {
       const device = createDevice();
-      delete device._settings.mode;
+      await device.onInit();
+      await device.setReportedState('open');
+      device.setCapabilityValue.mockClear();
+
+      await requestViaCapability(device, 'garagedoor_closed', true);
+
+      const reassert = device._timers.find(t => !t.cleared && t.ms === 1500);
+      expect(reassert).toBeDefined();
+      reassert.cleared = true;
+      reassert.fn();
+      await new Promise(resolve => setImmediate(resolve));
+      // still open: the rejected write must not stick anywhere
+      expect(device.setCapabilityValue).toHaveBeenCalledWith('garagedoor_closed', false);
+    });
+
+    test('open requests schedule no re-assert, keeping the Opening… transient alive', async () => {
+      const device = createDevice();
       await device.onInit();
 
-      expect(device.setSettings).toHaveBeenCalledWith({ mode: 'flow' });
-      expect(device._settings.mode).toBe('flow');
+      await requestViaCapability(device, 'garagedoor_closed', false);
+
+      expect(device._timers.filter(t => !t.cleared)).toHaveLength(0);
     });
   });
 

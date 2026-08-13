@@ -1,12 +1,12 @@
 {
   "name": {
-    "en": "Virtual Garage Door"
+    "en": "Garage Door (Flow controlled)",
+    "nl": "Garagedeur (Flow-gestuurd)"
   },
   "class": "garagedoor",
   "capabilities": [
     "garagedoor_closed",
-    "garagedoor_state",
-    "button"
+    "garagedoor_state"
   ],
   "platforms": [
     "local"
@@ -19,15 +19,6 @@
   },
   "pair": [
     {
-      "id": "mode"
-    },
-    {
-      "id": "managed_config"
-    },
-    {
-      "id": "gate_config"
-    },
-    {
       "id": "list_devices",
       "template": "list_devices",
       "navigation": {
@@ -37,11 +28,6 @@
     {
       "id": "add_devices",
       "template": "add_devices"
-    }
-  ],
-  "repair": [
-    {
-      "id": "managed_config"
     }
   ]
 }

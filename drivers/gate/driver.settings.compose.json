@@ -1,0 +1,103 @@
+[
+  {
+    "type": "group",
+    "label": {
+      "en": "Restrictions",
+      "nl": "Beperkingen"
+    },
+    "children": [
+      {
+        "id": "only_open_when_home",
+        "type": "checkbox",
+        "label": {
+          "en": "Only allow opening when someone is home",
+          "nl": "Alleen openen toestaan als er iemand thuis is"
+        },
+        "value": false,
+        "hint": {
+          "en": "Blocks every open request through this device — Apple Home, the device tile, and Flow cards — while no Homey user is marked as home. Closing is never blocked, and physical remotes or wall buttons are outside this app's reach. If presence cannot be determined, opening is allowed.",
+          "nl": "Blokkeert elk openverzoek via dit apparaat — Apple Home, de apparaattegel en Flow-kaarten — zolang geen enkele Homey-gebruiker als thuis is gemarkeerd. Sluiten wordt nooit geblokkeerd, en fysieke afstandsbedieningen of muurknoppen vallen buiten deze app. Als aanwezigheid niet kan worden bepaald, wordt openen toegestaan."
+        }
+      }
+    ]
+  },
+  {
+    "type": "group",
+    "label": {
+      "en": "Gate timing",
+      "nl": "Poorttiming"
+    },
+    "children": [
+      {
+        "id": "managed_devices_summary",
+        "type": "label",
+        "label": {
+          "en": "Configured devices",
+          "nl": "Geconfigureerde apparaten"
+        },
+        "value": "—",
+        "hint": {
+          "en": "Change the selected devices via 'Repair' in the device menu.",
+          "nl": "Wijzig de geselecteerde apparaten via 'Herstellen' in het apparaatmenu."
+        }
+      },
+      {
+        "id": "gate_opening_time",
+        "type": "number",
+        "label": {
+          "en": "Opening time",
+          "nl": "Openingstijd"
+        },
+        "value": 10,
+        "min": 1,
+        "max": 300,
+        "units": {
+          "en": "seconds",
+          "nl": "seconden"
+        },
+        "hint": {
+          "en": "How long the simulated Opening state lasts. Tip: short times (for example 3) bring the tile back to Closed quickly, so the gate can be triggered again right away.",
+          "nl": "Hoe lang de gesimuleerde status 'Bezig met openen' duurt. Tip: korte tijden (bijvoorbeeld 3) brengen de tegel snel terug naar Gesloten, zodat de poort direct opnieuw kan worden geactiveerd."
+        }
+      },
+      {
+        "id": "gate_hold_time",
+        "type": "number",
+        "label": {
+          "en": "Stays open for",
+          "nl": "Blijft open gedurende"
+        },
+        "value": 30,
+        "min": 1,
+        "max": 600,
+        "units": {
+          "en": "seconds",
+          "nl": "seconden"
+        },
+        "hint": {
+          "en": "How long the simulated Open state lasts before the gate is assumed to close again.",
+          "nl": "Hoe lang de gesimuleerde status Open duurt voordat de poort geacht wordt weer te sluiten."
+        }
+      },
+      {
+        "id": "gate_closing_time",
+        "type": "number",
+        "label": {
+          "en": "Closing time",
+          "nl": "Sluittijd"
+        },
+        "value": 10,
+        "min": 1,
+        "max": 300,
+        "units": {
+          "en": "seconds",
+          "nl": "seconden"
+        },
+        "hint": {
+          "en": "How long the simulated Closing state lasts.",
+          "nl": "Hoe lang de gesimuleerde status 'Bezig met sluiten' duurt."
+        }
+      }
+    ]
+  }
+]

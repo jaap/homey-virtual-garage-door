@@ -21,57 +21,77 @@ const VALID_GATE_CONFIG = {
 };
 
 describe('VirtualGarageDoorDriver', () => {
-  test('registers run listeners for all three action cards', async () => {
-    const driver = createDriver();
-    await driver.onInit();
+  describe('app-level flow action cards', () => {
+    const VirtualGarageDoorApp = require('../app');
 
-    for (const id of ['set_state', 'request_open', 'request_close']) {
-      expect(driver.homey.flow.getActionCard).toHaveBeenCalledWith(id);
-      expect(driver._actionCards[id].registerRunListener).toHaveBeenCalledTimes(1);
+    function createApp() {
+      const app = new VirtualGarageDoorApp();
+      const actionCards = {};
+      app._actionCards = actionCards;
+      app.log = jest.fn();
+      app.homey = {
+        flow: {
+          getActionCard: jest.fn(id => {
+            actionCards[id] = actionCards[id] || { registerRunListener: jest.fn() };
+            return actionCards[id];
+          }),
+        },
+      };
+      return app;
     }
-  });
 
-  test('the set_state card routes to device.setReportedState', async () => {
-    const driver = createDriver();
-    await driver.onInit();
+    test('registers run listeners for all three shared action cards', async () => {
+      const app = createApp();
+      await app.onInit();
 
-    const runListener = driver._actionCards.set_state.registerRunListener.mock.calls[0][0];
-    const device = { setReportedState: jest.fn().mockResolvedValue(undefined) };
-    await runListener({ device, state: 'closing' });
+      for (const id of ['set_state', 'request_open', 'request_close']) {
+        expect(app.homey.flow.getActionCard).toHaveBeenCalledWith(id);
+        expect(app._actionCards[id].registerRunListener).toHaveBeenCalledTimes(1);
+      }
+    });
 
-    expect(device.setReportedState).toHaveBeenCalledWith('closing');
-  });
+    test('the set_state card routes to device.setReportedState', async () => {
+      const app = createApp();
+      await app.onInit();
 
-  test.each([
-    ['request_open', 'open'],
-    ['request_close', 'close'],
-  ])('the %s card routes to device.request(%s)', async (cardId, direction) => {
-    const driver = createDriver();
-    await driver.onInit();
+      const runListener = app._actionCards.set_state.registerRunListener.mock.calls[0][0];
+      const device = { setReportedState: jest.fn().mockResolvedValue(undefined) };
+      await runListener({ device, state: 'closing' });
 
-    const runListener = driver._actionCards[cardId].registerRunListener.mock.calls[0][0];
-    const device = { request: jest.fn().mockResolvedValue(undefined) };
-    await runListener({ device });
+      expect(device.setReportedState).toHaveBeenCalledWith('closing');
+    });
 
-    expect(device.request).toHaveBeenCalledWith(direction);
+    test.each([
+      ['request_open', 'open'],
+      ['request_close', 'close'],
+    ])('the %s card routes to device.request(%s)', async (cardId, direction) => {
+      const app = createApp();
+      await app.onInit();
+
+      const runListener = app._actionCards[cardId].registerRunListener.mock.calls[0][0];
+      const device = { request: jest.fn().mockResolvedValue(undefined) };
+      await runListener({ device });
+
+      expect(device.request).toHaveBeenCalledWith(direction);
+    });
   });
 
   describe('pairing', () => {
-    test('without managed configuration, list_devices offers a plain flow-controlled device', async () => {
-      const driver = createDriver();
+    test('the flow-door driver offers a plain device without settings or store', async () => {
+      const driver = createDriver({ type: 'flow' });
       const session = createPairSession();
       await driver.onPair(session);
 
       const [device] = await session.handlers.list_devices();
       expect(device.name).toBe('i18n:pair.defaultName');
       expect(device.data.id).toMatch(UUID_RE);
-      expect(device.capabilities).toEqual(['garagedoor_closed', 'garagedoor_state']); // no gate button
+      expect(device.capabilities).toBeUndefined(); // the driver manifest is exact
       expect(device.settings).toBeUndefined();
       expect(device.store).toBeUndefined();
     });
 
-    test('with managed configuration, the new device carries settings and store references', async () => {
-      const driver = createDriver();
+    test('the managed-door driver carries settings and store references', async () => {
+      const driver = createDriver({ type: 'managed' });
       const session = createPairSession();
       await driver.onPair(session);
 
@@ -79,7 +99,6 @@ describe('VirtualGarageDoorDriver', () => {
       const [device] = await session.handlers.list_devices();
 
       expect(device.settings).toEqual({
-        mode: 'managed',
         travel_time: 18,
         closed_sensor_meaning: 'default',
         open_sensor_meaning: 'default',
@@ -91,18 +110,16 @@ describe('VirtualGarageDoorDriver', () => {
       });
     });
 
-    test('with gate configuration, the new device gains the kick button and timing settings', async () => {
-      const driver = createDriver();
+    test('the gate driver carries timing settings and is named as a gate', async () => {
+      const driver = createDriver({ type: 'gate' });
       const session = createPairSession();
       await driver.onPair(session);
 
       await session.handlers.set_gate_config(VALID_GATE_CONFIG);
       const [device] = await session.handlers.list_devices();
 
-      expect(device.capabilities).toEqual(['garagedoor_closed', 'garagedoor_state', 'button']);
-      expect(device.capabilitiesOptions.button.title.en).toBe('Open / keep open');
+      expect(device.name).toBe('i18n:pair.gateName');
       expect(device.settings).toEqual({
-        mode: 'gate',
         gate_opening_time: 3,
         gate_hold_time: 3,
         gate_closing_time: 1,
@@ -115,7 +132,7 @@ describe('VirtualGarageDoorDriver', () => {
     });
 
     test('every pairing session mints a unique device id', async () => {
-      const driver = createDriver();
+      const driver = createDriver({ type: 'flow' });
       const session = createPairSession();
       await driver.onPair(session);
 

@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "com.jaap.virtualgaragedoor",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "compatibility": ">=5.0.0",
   "sdk": 3,
   "platforms": [
@@ -34,50 +34,31 @@
   "flow": {
     "triggers": [
       {
-        "id": "open_requested",
-        "title": {
-          "en": "Open was requested",
-          "nl": "Openen werd gevraagd"
-        },
-        "hint": {
-          "en": "Starts when something asks this garage door to open: Apple Home, the device tile in the Homey app, the built-in Open/Toggle cards, or the 'Request to open' card. Handle the request in this Flow and report the actual state back.",
-          "nl": "Start wanneer iets vraagt om deze garagedeur te openen: Apple Home, de apparaattegel in de Homey-app, de standaard Open/Wissel-kaarten of de kaart 'Vraag om te openen'. Verwerk het verzoek in deze Flow en rapporteer de werkelijke status terug."
-        },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=garagedoor"
-          }
-        ]
-      },
-      {
-        "id": "close_requested",
         "title": {
           "en": "Close was requested",
           "nl": "Sluiten werd gevraagd"
         },
         "hint": {
-          "en": "Starts when something asks this garage door to close: Apple Home, the device tile in the Homey app, the built-in Close/Toggle cards, or the 'Request to close' card. Handle the request in this Flow and report the actual state back.",
-          "nl": "Start wanneer iets vraagt om deze garagedeur te sluiten: Apple Home, de apparaattegel in de Homey-app, de standaard Sluit/Wissel-kaarten of de kaart 'Vraag om te sluiten'. Verwerk het verzoek in deze Flow en rapporteer de werkelijke status terug."
+          "en": "Starts when something asks this garage door to close: Apple Home, the device tile, the built-in Close/Toggle cards, or the 'Request to close' card. On Flow controlled doors, handle the request in this Flow and report the actual state back; on Managed doors and gates this is informational.",
+          "nl": "Start wanneer iets vraagt om deze garagedeur te sluiten: Apple Home, de apparaattegel, de standaard Sluit/Wissel-kaarten of de kaart 'Vraag om te sluiten'. Verwerk het verzoek bij Flow-gestuurde deuren in deze Flow en rapporteer de werkelijke status terug; bij Beheerde deuren en poorten is dit informatief."
         },
         "args": [
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=garagedoor"
+            "filter": "driver_id=flow-door|managed-door|gate"
           }
-        ]
+        ],
+        "id": "close_requested"
       },
       {
-        "id": "garagedoor_state_changed",
         "title": {
           "en": "The door state changed",
           "nl": "De deurstatus is veranderd"
         },
         "hint": {
-          "en": "Starts whenever a Flow reports a new door state. The tag contains the new state: closed, opening, open or closing.",
-          "nl": "Start wanneer een Flow een nieuwe deurstatus rapporteert. De tag bevat de nieuwe status: closed, opening, open of closing."
+          "en": "Starts whenever the door state changes. The tag contains the new state: closed, opening, open, closing or stopped.",
+          "nl": "Start wanneer de deurstatus verandert. De tag bevat de nieuwe status: closed, opening, open, closing of stopped."
         },
         "tokens": [
           {
@@ -96,19 +77,19 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=garagedoor"
+            "filter": "driver_id=flow-door|managed-door|gate"
           }
-        ]
+        ],
+        "id": "garagedoor_state_changed"
       },
       {
-        "id": "movement_failed",
         "title": {
           "en": "The door failed to reach its position",
           "nl": "De deur heeft zijn positie niet bereikt"
         },
         "hint": {
-          "en": "Starts in Managed mode when the expected travel time passes without the door reaching its endpoint. The tag tells whether it happened while opening or closing.",
-          "nl": "Start in Beheerde modus wanneer de verwachte looptijd verstrijkt zonder dat de deur zijn eindpunt bereikt. De tag geeft aan of dit tijdens het openen of sluiten gebeurde."
+          "en": "Starts on Managed doors when the expected travel time passes without the door reaching its endpoint. The tag tells whether it happened while opening or closing.",
+          "nl": "Start bij Beheerde deuren wanneer de verwachte looptijd verstrijkt zonder dat de deur zijn eindpunt bereikt. De tag geeft aan of dit tijdens het openen of sluiten gebeurde."
         },
         "tokens": [
           {
@@ -127,14 +108,68 @@
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=garagedoor"
+            "filter": "driver_id=flow-door|managed-door|gate"
           }
-        ]
+        ],
+        "id": "movement_failed"
+      },
+      {
+        "title": {
+          "en": "Open was requested",
+          "nl": "Openen werd gevraagd"
+        },
+        "hint": {
+          "en": "Starts when something asks this garage door to open: Apple Home, the device tile, the built-in Open/Toggle cards, or the 'Request to open' card. On Flow controlled doors, handle the request in this Flow and report the actual state back; on Managed doors and gates this is informational.",
+          "nl": "Start wanneer iets vraagt om deze garagedeur te openen: Apple Home, de apparaattegel, de standaard Open/Wissel-kaarten of de kaart 'Vraag om te openen'. Verwerk het verzoek bij Flow-gestuurde deuren in deze Flow en rapporteer de werkelijke status terug; bij Beheerde deuren en poorten is dit informatief."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=flow-door|managed-door|gate"
+          }
+        ],
+        "id": "open_requested"
       }
     ],
     "actions": [
       {
-        "id": "set_state",
+        "title": {
+          "en": "Request to close",
+          "nl": "Vraag om te sluiten"
+        },
+        "hint": {
+          "en": "Asks the door to close, exactly like Apple Home or the device tile would. Gates refuse this: they close by themselves.",
+          "nl": "Vraagt om de deur te sluiten, precies zoals Apple Home of de apparaattegel dat doet. Poorten weigeren dit: ze sluiten vanzelf."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=flow-door|managed-door|gate"
+          }
+        ],
+        "id": "request_close"
+      },
+      {
+        "title": {
+          "en": "Request to open",
+          "nl": "Vraag om te openen"
+        },
+        "hint": {
+          "en": "Asks the door to open, exactly like Apple Home or the device tile would. On Managed doors and gates this operates the door; on Flow controlled doors it starts the 'Open was requested' trigger.",
+          "nl": "Vraagt om de deur te openen, precies zoals Apple Home of de apparaattegel dat doet. Bij Beheerde deuren en poorten bedient dit de deur; bij Flow-gestuurde deuren start dit de trigger 'Openen werd gevraagd'."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=flow-door|managed-door|gate"
+          }
+        ],
+        "id": "request_open"
+      },
+      {
         "title": {
           "en": "Report the door state",
           "nl": "Rapporteer de deurstatus"
@@ -144,14 +179,14 @@
           "nl": "Rapporteer de deurstatus als [[state]]"
         },
         "hint": {
-          "en": "Reports the actual state of the garage door, as observed by your sensors or automation. This is the only way the state of the virtual garage door changes.",
-          "nl": "Rapporteert de werkelijke status van de garagedeur, zoals waargenomen door je sensoren of automatisering. Dit is de enige manier waarop de status van de virtuele garagedeur verandert."
+          "en": "Reports the actual state of the garage door. On Flow controlled doors this is the only way the state changes; on Managed doors and gates it overrides the app's own tracking.",
+          "nl": "Rapporteert de werkelijke status van de garagedeur. Bij Flow-gestuurde deuren is dit de enige manier waarop de status verandert; bij Beheerde deuren en poorten overschrijft dit de eigen registratie van de app."
         },
         "args": [
           {
             "type": "device",
             "name": "device",
-            "filter": "driver_id=garagedoor"
+            "filter": "driver_id=flow-door|managed-door|gate"
           },
           {
             "name": "state",
@@ -198,50 +233,74 @@
               }
             ]
           }
-        ]
-      },
-      {
-        "id": "request_open",
-        "title": {
-          "en": "Request to open",
-          "nl": "Vraag om te openen"
-        },
-        "hint": {
-          "en": "Asks the door to open by starting the 'Open was requested' trigger, exactly like Apple Home or the device tile would. The state does not change until a Flow reports it.",
-          "nl": "Vraagt om de deur te openen door de trigger 'Openen werd gevraagd' te starten, precies zoals Apple Home of de apparaattegel dat doet. De status verandert pas wanneer een Flow deze rapporteert."
-        },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=garagedoor"
-          }
-        ]
-      },
-      {
-        "id": "request_close",
-        "title": {
-          "en": "Request to close",
-          "nl": "Vraag om te sluiten"
-        },
-        "hint": {
-          "en": "Asks the door to close by starting the 'Close was requested' trigger, exactly like Apple Home or the device tile would. The state does not change until a Flow reports it.",
-          "nl": "Vraagt om de deur te sluiten door de trigger 'Sluiten werd gevraagd' te starten, precies zoals Apple Home of de apparaattegel dat doet. De status verandert pas wanneer een Flow deze rapporteert."
-        },
-        "args": [
-          {
-            "type": "device",
-            "name": "device",
-            "filter": "driver_id=garagedoor"
-          }
-        ]
+        ],
+        "id": "set_state"
       }
     ]
   },
   "drivers": [
     {
       "name": {
-        "en": "Virtual Garage Door"
+        "en": "Garage Door (Flow controlled)",
+        "nl": "Garagedeur (Flow-gestuurd)"
+      },
+      "class": "garagedoor",
+      "capabilities": [
+        "garagedoor_closed",
+        "garagedoor_state"
+      ],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [],
+      "images": {
+        "small": "/drivers/flow-door/assets/images/small.png",
+        "large": "/drivers/flow-door/assets/images/large.png",
+        "xlarge": "/drivers/flow-door/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "flow-door",
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Restrictions",
+            "nl": "Beperkingen"
+          },
+          "children": [
+            {
+              "id": "only_open_when_home",
+              "type": "checkbox",
+              "label": {
+                "en": "Only allow opening when someone is home",
+                "nl": "Alleen openen toestaan als er iemand thuis is"
+              },
+              "value": false,
+              "hint": {
+                "en": "Blocks every open request through this device — Apple Home, the device tile, and Flow cards — while no Homey user is marked as home. Closing is never blocked, and physical remotes or wall buttons are outside this app's reach. If presence cannot be determined, opening is allowed.",
+                "nl": "Blokkeert elk openverzoek via dit apparaat — Apple Home, de apparaattegel en Flow-kaarten — zolang geen enkele Homey-gebruiker als thuis is gemarkeerd. Sluiten wordt nooit geblokkeerd, en fysieke afstandsbedieningen of muurknoppen vallen buiten deze app. Als aanwezigheid niet kan worden bepaald, wordt openen toegestaan."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": {
+        "en": "Auto-closing Gate",
+        "nl": "Zelfsluitende poort"
       },
       "class": "garagedoor",
       "capabilities": [
@@ -254,17 +313,11 @@
       ],
       "connectivity": [],
       "images": {
-        "small": "/drivers/garagedoor/assets/images/small.png",
-        "large": "/drivers/garagedoor/assets/images/large.png",
-        "xlarge": "/drivers/garagedoor/assets/images/xlarge.png"
+        "small": "/drivers/gate/assets/images/small.png",
+        "large": "/drivers/gate/assets/images/large.png",
+        "xlarge": "/drivers/gate/assets/images/xlarge.png"
       },
       "pair": [
-        {
-          "id": "mode"
-        },
-        {
-          "id": "managed_config"
-        },
         {
           "id": "gate_config"
         },
@@ -280,58 +333,21 @@
           "template": "add_devices"
         }
       ],
+      "capabilitiesOptions": {
+        "button": {
+          "title": {
+            "en": "Open / keep open",
+            "nl": "Openen / open houden"
+          }
+        }
+      },
       "repair": [
         {
-          "id": "managed_config"
+          "id": "gate_config"
         }
       ],
-      "id": "garagedoor",
+      "id": "gate",
       "settings": [
-        {
-          "type": "group",
-          "label": {
-            "en": "Mode",
-            "nl": "Modus"
-          },
-          "children": [
-            {
-              "id": "mode",
-              "type": "dropdown",
-              "label": {
-                "en": "Operating mode",
-                "nl": "Bedieningsmodus"
-              },
-              "value": "flow",
-              "values": [
-                {
-                  "id": "flow",
-                  "label": {
-                    "en": "Flow controlled — your Flows handle everything",
-                    "nl": "Flow-gestuurd — je Flows regelen alles"
-                  }
-                },
-                {
-                  "id": "managed",
-                  "label": {
-                    "en": "Managed — the app operates your relay and sensors",
-                    "nl": "Beheerd — de app bedient je relais en sensoren"
-                  }
-                },
-                {
-                  "id": "gate",
-                  "label": {
-                    "en": "Auto-closing gate — timer only, no sensors",
-                    "nl": "Zelfsluitende poort — alleen timers, geen sensoren"
-                  }
-                }
-              ],
-              "hint": {
-                "en": "Managed mode needs a configured control device and closed sensor. If they were not set up during pairing, use 'Repair' from the device menu to configure them.",
-                "nl": "Beheerde modus vereist een geconfigureerd bedieningsapparaat en gesloten-sensor. Zijn deze niet ingesteld tijdens het toevoegen, gebruik dan 'Herstellen' in het apparaatmenu."
-              }
-            }
-          ]
-        },
         {
           "type": "group",
           "label": {
@@ -357,8 +373,153 @@
         {
           "type": "group",
           "label": {
-            "en": "Managed mode",
-            "nl": "Beheerde modus"
+            "en": "Gate timing",
+            "nl": "Poorttiming"
+          },
+          "children": [
+            {
+              "id": "managed_devices_summary",
+              "type": "label",
+              "label": {
+                "en": "Configured devices",
+                "nl": "Geconfigureerde apparaten"
+              },
+              "value": "—",
+              "hint": {
+                "en": "Change the selected devices via 'Repair' in the device menu.",
+                "nl": "Wijzig de geselecteerde apparaten via 'Herstellen' in het apparaatmenu."
+              }
+            },
+            {
+              "id": "gate_opening_time",
+              "type": "number",
+              "label": {
+                "en": "Opening time",
+                "nl": "Openingstijd"
+              },
+              "value": 10,
+              "min": 1,
+              "max": 300,
+              "units": {
+                "en": "seconds",
+                "nl": "seconden"
+              },
+              "hint": {
+                "en": "How long the simulated Opening state lasts. Tip: short times (for example 3) bring the tile back to Closed quickly, so the gate can be triggered again right away.",
+                "nl": "Hoe lang de gesimuleerde status 'Bezig met openen' duurt. Tip: korte tijden (bijvoorbeeld 3) brengen de tegel snel terug naar Gesloten, zodat de poort direct opnieuw kan worden geactiveerd."
+              }
+            },
+            {
+              "id": "gate_hold_time",
+              "type": "number",
+              "label": {
+                "en": "Stays open for",
+                "nl": "Blijft open gedurende"
+              },
+              "value": 30,
+              "min": 1,
+              "max": 600,
+              "units": {
+                "en": "seconds",
+                "nl": "seconden"
+              },
+              "hint": {
+                "en": "How long the simulated Open state lasts before the gate is assumed to close again.",
+                "nl": "Hoe lang de gesimuleerde status Open duurt voordat de poort geacht wordt weer te sluiten."
+              }
+            },
+            {
+              "id": "gate_closing_time",
+              "type": "number",
+              "label": {
+                "en": "Closing time",
+                "nl": "Sluittijd"
+              },
+              "value": 10,
+              "min": 1,
+              "max": 300,
+              "units": {
+                "en": "seconds",
+                "nl": "seconden"
+              },
+              "hint": {
+                "en": "How long the simulated Closing state lasts.",
+                "nl": "Hoe lang de gesimuleerde status 'Bezig met sluiten' duurt."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": {
+        "en": "Garage Door (Managed)",
+        "nl": "Garagedeur (Beheerd)"
+      },
+      "class": "garagedoor",
+      "capabilities": [
+        "garagedoor_closed",
+        "garagedoor_state"
+      ],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [],
+      "images": {
+        "small": "/drivers/managed-door/assets/images/small.png",
+        "large": "/drivers/managed-door/assets/images/large.png",
+        "xlarge": "/drivers/managed-door/assets/images/xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "managed_config"
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "repair": [
+        {
+          "id": "managed_config"
+        }
+      ],
+      "id": "managed-door",
+      "settings": [
+        {
+          "type": "group",
+          "label": {
+            "en": "Restrictions",
+            "nl": "Beperkingen"
+          },
+          "children": [
+            {
+              "id": "only_open_when_home",
+              "type": "checkbox",
+              "label": {
+                "en": "Only allow opening when someone is home",
+                "nl": "Alleen openen toestaan als er iemand thuis is"
+              },
+              "value": false,
+              "hint": {
+                "en": "Blocks every open request through this device — Apple Home, the device tile, and Flow cards — while no Homey user is marked as home. Closing is never blocked, and physical remotes or wall buttons are outside this app's reach. If presence cannot be determined, opening is allowed.",
+                "nl": "Blokkeert elk openverzoek via dit apparaat — Apple Home, de apparaattegel en Flow-kaarten — zolang geen enkele Homey-gebruiker als thuis is gemarkeerd. Sluiten wordt nooit geblokkeerd, en fysieke afstandsbedieningen of muurknoppen vallen buiten deze app. Als aanwezigheid niet kan worden bepaald, wordt openen toegestaan."
+              }
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": {
+            "en": "Door configuration",
+            "nl": "Deurconfiguratie"
           },
           "children": [
             {
@@ -420,63 +581,6 @@
               "hint": {
                 "en": "Change this if the device shows Open while the door is actually closed.",
                 "nl": "Wijzig dit als het apparaat Open toont terwijl de deur eigenlijk gesloten is."
-              }
-            },
-            {
-              "id": "gate_opening_time",
-              "type": "number",
-              "label": {
-                "en": "Gate: opening time",
-                "nl": "Poort: openingstijd"
-              },
-              "value": 10,
-              "min": 1,
-              "max": 300,
-              "units": {
-                "en": "seconds",
-                "nl": "seconden"
-              },
-              "hint": {
-                "en": "Auto-closing gate only: how long the simulated Opening state lasts. Tip: short times (for example 3) bring the tile back to Closed quickly, so the gate can be triggered again right away.",
-                "nl": "Alleen zelfsluitende poort: hoe lang de gesimuleerde status 'Bezig met openen' duurt. Tip: korte tijden (bijvoorbeeld 3) brengen de tegel snel terug naar Gesloten, zodat de poort direct opnieuw kan worden geactiveerd."
-              }
-            },
-            {
-              "id": "gate_hold_time",
-              "type": "number",
-              "label": {
-                "en": "Gate: stays open for",
-                "nl": "Poort: blijft open gedurende"
-              },
-              "value": 30,
-              "min": 1,
-              "max": 600,
-              "units": {
-                "en": "seconds",
-                "nl": "seconden"
-              },
-              "hint": {
-                "en": "Auto-closing gate only: how long the simulated Open state lasts before the gate is assumed to close again.",
-                "nl": "Alleen zelfsluitende poort: hoe lang de gesimuleerde status Open duurt voordat de poort geacht wordt weer te sluiten."
-              }
-            },
-            {
-              "id": "gate_closing_time",
-              "type": "number",
-              "label": {
-                "en": "Gate: closing time",
-                "nl": "Poort: sluittijd"
-              },
-              "value": 10,
-              "min": 1,
-              "max": 300,
-              "units": {
-                "en": "seconds",
-                "nl": "seconden"
-              },
-              "hint": {
-                "en": "Auto-closing gate only: how long the simulated Closing state lasts.",
-                "nl": "Alleen zelfsluitende poort: hoe lang de gesimuleerde status 'Bezig met sluiten' duurt."
               }
             },
             {

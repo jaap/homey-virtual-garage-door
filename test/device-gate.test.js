@@ -142,7 +142,7 @@ describe('VirtualGarageDoorDevice — auto-closing gate', () => {
   });
 
   test('gate mode without a configured control device warns and stays flow-like', async () => {
-    const device = createDevice({ settings: { mode: 'gate' }, store: { reportedState: 'open' } });
+    const device = createDevice({ type: 'gate', store: { reportedState: 'open' } });
     await device.onInit();
 
     expect(device.setWarning).toHaveBeenCalledWith('i18n:warning.not_configured');

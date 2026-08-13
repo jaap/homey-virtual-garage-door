@@ -1,0 +1,30 @@
+{
+  "title": {
+    "en": "The door failed to reach its position",
+    "nl": "De deur heeft zijn positie niet bereikt"
+  },
+  "hint": {
+    "en": "Starts on Managed doors when the expected travel time passes without the door reaching its endpoint. The tag tells whether it happened while opening or closing.",
+    "nl": "Start bij Beheerde deuren wanneer de verwachte looptijd verstrijkt zonder dat de deur zijn eindpunt bereikt. De tag geeft aan of dit tijdens het openen of sluiten gebeurde."
+  },
+  "tokens": [
+    {
+      "name": "direction",
+      "type": "string",
+      "title": {
+        "en": "Direction",
+        "nl": "Richting"
+      },
+      "example": {
+        "en": "closing"
+      }
+    }
+  ],
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=flow-door|managed-door|gate"
+    }
+  ]
+}

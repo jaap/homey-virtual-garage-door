@@ -1,0 +1,66 @@
+{
+  "title": {
+    "en": "Report the door state",
+    "nl": "Rapporteer de deurstatus"
+  },
+  "titleFormatted": {
+    "en": "Report the door state as [[state]]",
+    "nl": "Rapporteer de deurstatus als [[state]]"
+  },
+  "hint": {
+    "en": "Reports the actual state of the garage door. On Flow controlled doors this is the only way the state changes; on Managed doors and gates it overrides the app's own tracking.",
+    "nl": "Rapporteert de werkelijke status van de garagedeur. Bij Flow-gestuurde deuren is dit de enige manier waarop de status verandert; bij Beheerde deuren en poorten overschrijft dit de eigen registratie van de app."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=flow-door|managed-door|gate"
+    },
+    {
+      "name": "state",
+      "type": "dropdown",
+      "title": {
+        "en": "State",
+        "nl": "Status"
+      },
+      "values": [
+        {
+          "id": "closed",
+          "title": {
+            "en": "Closed",
+            "nl": "Gesloten"
+          }
+        },
+        {
+          "id": "opening",
+          "title": {
+            "en": "Opening",
+            "nl": "Bezig met openen"
+          }
+        },
+        {
+          "id": "open",
+          "title": {
+            "en": "Open",
+            "nl": "Open"
+          }
+        },
+        {
+          "id": "closing",
+          "title": {
+            "en": "Closing",
+            "nl": "Bezig met sluiten"
+          }
+        },
+        {
+          "id": "stopped",
+          "title": {
+            "en": "Stopped",
+            "nl": "Gestopt"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,15 +1,6 @@
 {
   "pair": {
     "defaultName": "Virtual Garage Door",
-    "mode": {
-      "title": "How should this garage door work?",
-      "managedTitle": "Managed — no Flows needed",
-      "managedDesc": "Pick the relay that triggers your door and the sensor that detects it is closed. The app operates the door and tracks its state itself.",
-      "flowTitle": "Flow controlled",
-      "flowDesc": "Your own Advanced Flows respond to open/close requests, operate the hardware and report the door state back. Maximum control.",
-      "gateTitle": "Auto-closing gate — timer only",
-      "gateDesc": "For shared entrance gates that open on a pulse and close again by themselves. No sensors: the app animates the cycle on timers, and every trigger simply means \"open / stay open\"."
-    },
     "gate": {
       "control": "Which device triggers the gate?",
       "opening": "Opening (s)",
@@ -32,7 +23,8 @@
       "travelHint": "Time your door and add 10–20% margin. Example: the door takes ~15 seconds, so enter 18.",
       "save": "Continue",
       "saveRepair": "Save"
-    }
+    },
+    "gateName": "Auto-closing Gate"
   },
   "request": {
     "open": "Open requested — waiting for a Flow to report the actual state.",

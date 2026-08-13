@@ -1,0 +1,17 @@
+{
+  "title": {
+    "en": "Request to close",
+    "nl": "Vraag om te sluiten"
+  },
+  "hint": {
+    "en": "Asks the door to close, exactly like Apple Home or the device tile would. Gates refuse this: they close by themselves.",
+    "nl": "Vraagt om de deur te sluiten, precies zoals Apple Home of de apparaattegel dat doet. Poorten weigeren dit: ze sluiten vanzelf."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=flow-door|managed-door|gate"
+    }
+  ]
+}

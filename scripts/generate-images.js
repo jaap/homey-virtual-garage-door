@@ -20,13 +20,17 @@ const BACKGROUND = [0x2e, 0x56, 0xb5]; // must match brandColor in .homeycompose
 const GLYPH_COLOR = [0xff, 0xff, 0xff];
 const GLYPH_HEIGHT_FRACTION = 0.52;
 
+const DRIVERS = ['flow-door', 'managed-door', 'gate'];
+
 const IMAGES = [
   { file: 'assets/images/small.png', width: 250, height: 175 },
   { file: 'assets/images/large.png', width: 500, height: 350 },
   { file: 'assets/images/xlarge.png', width: 1000, height: 700 },
-  { file: 'drivers/garagedoor/assets/images/small.png', width: 75, height: 75 },
-  { file: 'drivers/garagedoor/assets/images/large.png', width: 500, height: 500 },
-  { file: 'drivers/garagedoor/assets/images/xlarge.png', width: 1000, height: 1000 },
+  ...DRIVERS.flatMap(driver => [
+    { file: `drivers/${driver}/assets/images/small.png`, width: 75, height: 75 },
+    { file: `drivers/${driver}/assets/images/large.png`, width: 500, height: 500 },
+    { file: `drivers/${driver}/assets/images/xlarge.png`, width: 1000, height: 1000 },
+  ]),
 ];
 
 // --- glyph geometry, in the icon's 0..100 coordinate space ---------------

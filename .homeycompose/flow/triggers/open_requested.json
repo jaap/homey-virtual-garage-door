@@ -1,0 +1,17 @@
+{
+  "title": {
+    "en": "Open was requested",
+    "nl": "Openen werd gevraagd"
+  },
+  "hint": {
+    "en": "Starts when something asks this garage door to open: Apple Home, the device tile, the built-in Open/Toggle cards, or the 'Request to open' card. On Flow controlled doors, handle the request in this Flow and report the actual state back; on Managed doors and gates this is informational.",
+    "nl": "Start wanneer iets vraagt om deze garagedeur te openen: Apple Home, de apparaattegel, de standaard Open/Wissel-kaarten of de kaart 'Vraag om te openen'. Verwerk het verzoek bij Flow-gestuurde deuren in deze Flow en rapporteer de werkelijke status terug; bij Beheerde deuren en poorten is dit informatief."
+  },
+  "args": [
+    {
+      "type": "device",
+      "name": "device",
+      "filter": "driver_id=flow-door|managed-door|gate"
+    }
+  ]
+}

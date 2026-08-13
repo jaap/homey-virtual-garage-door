@@ -1,7 +1,15 @@
 'use strict';
 
-const VirtualGarageDoorDevice = require('../drivers/garagedoor/device');
-const VirtualGarageDoorDriver = require('../drivers/garagedoor/driver');
+const DEVICE_CLASSES = {
+  flow: require('../drivers/flow-door/device'),
+  managed: require('../drivers/managed-door/device'),
+  gate: require('../drivers/gate/device'),
+};
+const DRIVER_CLASSES = {
+  flow: require('../drivers/flow-door/driver'),
+  managed: require('../drivers/managed-door/driver'),
+  gate: require('../drivers/gate/driver'),
+};
 
 /**
  * Build a VirtualGarageDoorDevice with the Homey SDK surface it uses mocked
@@ -13,13 +21,12 @@ const VirtualGarageDoorDriver = require('../drivers/garagedoor/driver');
  *
  * The device is returned uninitialized; tests call `await device.onInit()`.
  */
-function createDevice({ store = {}, capabilities = {}, settings = {}, api = null } = {}) {
-  const device = new VirtualGarageDoorDevice();
+function createDevice({ type = 'flow', store = {}, capabilities = {}, settings = {}, api = null } = {}) {
+  const device = new DEVICE_CLASSES[type]();
 
   device._store = { ...store };
   device._caps = { garagedoor_closed: null, garagedoor_state: null, ...capabilities };
   device._settings = {
-    mode: 'flow',
     travel_time: 18,
     closed_sensor_meaning: 'default',
     open_sensor_meaning: 'default',
@@ -187,8 +194,9 @@ function createManagedDevice({
   const api = createApi(withOpenSensor ? { ctrl: control, cs: closedSensor, os: openSensor } : { ctrl: control, cs: closedSensor });
 
   const device = createDevice({
+    type: 'managed',
     api,
-    settings: { mode: 'managed', ...settings },
+    settings,
     store: {
       controlDevice: { id: 'ctrl', capability: 'onoff' },
       closedSensor: { id: 'cs', capability: 'alarm_contact' },
@@ -209,10 +217,11 @@ function createGateDevice({ settings = {}, store = {} } = {}) {
   const api = createApi({ ctrl: control });
 
   const device = createDevice({
+    type: 'gate',
     api,
     capabilities: { button: null },
     settings: {
-      mode: 'gate', gate_opening_time: 3, gate_hold_time: 3, gate_closing_time: 1, ...settings,
+      gate_opening_time: 3, gate_hold_time: 3, gate_closing_time: 1, ...settings,
     },
     store: {
       controlDevice: { id: 'ctrl', capability: 'onoff' }, closedSensor: null, openSensor: null, ...store,
@@ -226,8 +235,8 @@ function createGateDevice({ settings = {}, store = {} } = {}) {
  * Build a VirtualGarageDoorDriver with a mocked Homey SDK surface. Action
  * card mocks are exposed per card id via `driver._actionCards`.
  */
-function createDriver({ api = null } = {}) {
-  const driver = new VirtualGarageDoorDriver();
+function createDriver({ type = 'flow', api = null } = {}) {
+  const driver = new DRIVER_CLASSES[type]();
 
   driver.log = jest.fn();
   driver.error = jest.fn();

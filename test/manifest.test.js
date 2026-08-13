@@ -10,7 +10,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const VirtualGarageDoorDevice = require('../drivers/garagedoor/device');
+const VirtualDoorDevice = require('../lib/virtual-door-device');
 
 const ROOT = path.join(__dirname, '..');
 const manifest = require('../app.json');
@@ -18,14 +18,18 @@ const composeApp = require('../.homeycompose/app.json');
 const composeCapability = require('../.homeycompose/capabilities/garagedoor_state.json');
 const pkg = require('../package.json');
 
-const { STATES } = VirtualGarageDoorDevice;
+const { STATES } = VirtualDoorDevice;
+const DRIVER_IDS = ['flow-door', 'gate', 'managed-door'];
+const DEVICE_FILTER = 'driver_id=flow-door|managed-door|gate';
+
+const driverById = id => manifest.drivers.find(driver => driver.id === id);
 
 describe('app manifest', () => {
   test('identity and platform', () => {
     expect(manifest.id).toBe('com.jaap.virtualgaragedoor');
     expect(manifest.sdk).toBe(3);
     expect(manifest.platforms).toEqual(['local']);
-    // Managed mode operates other devices through the Homey Web API
+    // Managed/gate devices and the presence check use the Homey Web API
     expect(manifest.permissions).toEqual(['homey:manager:api']);
   });
 
@@ -34,44 +38,56 @@ describe('app manifest', () => {
     expect(manifest.version).toBe(pkg.version);
   });
 
-  test('driver is a garagedoor-class device with the expected capabilities', () => {
-    expect(manifest.drivers).toHaveLength(1);
-    const [driver] = manifest.drivers;
-    expect(driver.id).toBe('garagedoor');
-    expect(driver.class).toBe('garagedoor');
-    // `button` is the driver-level superset; flow/managed devices are paired
-    // with an explicit capability list that leaves it out
-    expect(driver.capabilities).toEqual(['garagedoor_closed', 'garagedoor_state', 'button']);
-  });
-
-  test('pairing starts with the mode chooser and ends in list/add devices', () => {
-    const [driver] = manifest.drivers;
-    expect(driver.pair.map(view => view.id)).toEqual(['mode', 'managed_config', 'gate_config', 'list_devices', 'add_devices']);
-    expect(driver.pair[0].template).toBeUndefined(); // custom view
-    expect(driver.pair[3].navigation).toEqual({ next: 'add_devices' });
-    expect(driver.repair.map(view => view.id)).toEqual(['managed_config']);
-
-    // the custom views must exist on disk
-    for (const file of ['pair/mode.html', 'pair/managed_config.html', 'pair/gate_config.html', 'repair/managed_config.html']) {
-      expect(fs.existsSync(path.join(ROOT, 'drivers/garagedoor', file))).toBe(true);
+  test('exactly the three driver types exist, all garagedoor class', () => {
+    expect(manifest.drivers.map(driver => driver.id).sort()).toEqual(DRIVER_IDS);
+    for (const driver of manifest.drivers) {
+      expect(driver.class).toBe('garagedoor');
     }
   });
 
-  test('managed-mode settings are declared', () => {
-    const [driver] = manifest.drivers;
-    const settingIds = driver.settings.flatMap(group => group.children.map(child => child.id));
-    expect(settingIds).toEqual(
-      expect.arrayContaining([
-        'mode', 'travel_time', 'closed_sensor_meaning', 'open_sensor_meaning', 'managed_devices_summary',
-        'gate_opening_time', 'gate_hold_time', 'gate_closing_time',
-      ]),
-    );
-    const mode = driver.settings.flatMap(g => g.children).find(c => c.id === 'mode');
-    expect(mode.value).toBe('flow'); // existing devices stay flow controlled
-    expect(mode.values.map(v => v.id)).toEqual(['flow', 'managed', 'gate']);
+  test('capabilities per driver: doors are plain, the gate adds its kick button', () => {
+    expect(driverById('flow-door').capabilities).toEqual(['garagedoor_closed', 'garagedoor_state']);
+    expect(driverById('managed-door').capabilities).toEqual(['garagedoor_closed', 'garagedoor_state']);
+    expect(driverById('gate').capabilities).toEqual(['garagedoor_closed', 'garagedoor_state', 'button']);
+    expect(driverById('gate').capabilitiesOptions.button.title.en).toBe('Open / keep open');
   });
 
-  test('flow cards exist and are scoped to this driver', () => {
+  test('pairing flows per driver, with every custom view present on disk', () => {
+    expect(driverById('flow-door').pair.map(view => view.id)).toEqual(['list_devices', 'add_devices']);
+    expect(driverById('managed-door').pair.map(view => view.id)).toEqual(['managed_config', 'list_devices', 'add_devices']);
+    expect(driverById('gate').pair.map(view => view.id)).toEqual(['gate_config', 'list_devices', 'add_devices']);
+    expect(driverById('managed-door').repair.map(view => view.id)).toEqual(['managed_config']);
+    expect(driverById('gate').repair.map(view => view.id)).toEqual(['gate_config']);
+    expect(driverById('flow-door').repair).toBeUndefined();
+
+    for (const file of [
+      'drivers/managed-door/pair/managed_config.html',
+      'drivers/managed-door/repair/managed_config.html',
+      'drivers/gate/pair/gate_config.html',
+      'drivers/gate/repair/gate_config.html',
+    ]) {
+      expect(fs.existsSync(path.join(ROOT, file))).toBe(true);
+    }
+  });
+
+  test('settings per driver contain exactly the relevant knobs', () => {
+    const settingIds = driver => driver.settings.flatMap(group => group.children.map(child => child.id)).sort();
+
+    expect(settingIds(driverById('flow-door'))).toEqual(['only_open_when_home']);
+    expect(settingIds(driverById('managed-door'))).toEqual([
+      'closed_sensor_meaning', 'managed_devices_summary', 'only_open_when_home', 'open_sensor_meaning', 'travel_time',
+    ].sort());
+    expect(settingIds(driverById('gate'))).toEqual([
+      'gate_closing_time', 'gate_hold_time', 'gate_opening_time', 'managed_devices_summary', 'only_open_when_home',
+    ].sort());
+
+    // no driver exposes a mode setting anymore — the driver type is the mode
+    for (const driver of manifest.drivers) {
+      expect(settingIds(driver)).not.toContain('mode');
+    }
+  });
+
+  test('flow cards are shared across all three drivers', () => {
     const triggers = manifest.flow.triggers.map(t => t.id).sort();
     expect(triggers).toEqual(['close_requested', 'garagedoor_state_changed', 'movement_failed', 'open_requested']);
 
@@ -83,7 +99,7 @@ describe('app manifest', () => {
       expect(deviceArg).toEqual({
         type: 'device',
         name: 'device',
-        filter: 'driver_id=garagedoor',
+        filter: DEVICE_FILTER,
       });
     }
   });
@@ -106,8 +122,6 @@ describe('app manifest', () => {
 
   test('the set_state action offers exactly the states the device accepts', () => {
     const action = manifest.flow.actions.find(a => a.id === 'set_state');
-    expect(action).toBeDefined();
-
     const stateArg = action.args.find(arg => arg.name === 'state');
     expect(stateArg.type).toBe('dropdown');
     expect(stateArg.values.map(v => v.id)).toEqual(STATES);
@@ -125,35 +139,35 @@ describe('app manifest', () => {
     expect(capability.getable).toBe(true);
     expect(capability.setable).toBe(false);
     expect(capability.values.map(v => v.id)).toEqual(STATES);
-    // generated manifest must match the compose source
     expect(capability).toEqual(composeCapability);
   });
 
-  test('every referenced asset exists', () => {
-    const paths = [
+  test('every referenced asset exists with the sizes Homey requires', () => {
+    const assets = [
       ...Object.values(manifest.images),
-      ...Object.values(manifest.drivers[0].images),
       manifest.capabilities.garagedoor_state.icon,
       '/assets/icon.svg',
-      '/drivers/garagedoor/assets/icon.svg',
     ];
-    for (const assetPath of paths) {
-      const resolved = path.join(ROOT, assetPath.replace(/^\//, ''));
-      expect(fs.existsSync(resolved)).toBe(true);
+    for (const driver of manifest.drivers) {
+      assets.push(...Object.values(driver.images));
+      assets.push(`/drivers/${driver.id}/assets/icon.svg`);
     }
-  });
+    for (const assetPath of assets) {
+      expect(fs.existsSync(path.join(ROOT, assetPath.replace(/^\//, '')))).toBe(true);
+    }
 
-  test.each([
-    ['app', 'images', { small: [250, 175], large: [500, 350], xlarge: [1000, 700] }],
-    ['driver', 'drivers/garagedoor images', { small: [75, 75], large: [500, 500], xlarge: [1000, 1000] }],
-  ])('generated %s images have the sizes Homey requires', (kind, _label, expected) => {
-    const images = kind === 'app' ? manifest.images : manifest.drivers[0].images;
-    for (const [size, [width, height]] of Object.entries(expected)) {
-      const buffer = fs.readFileSync(path.join(ROOT, images[size].replace(/^\//, '')));
-      // PNG signature, then IHDR: width and height as big-endian uint32
-      expect(buffer.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    const expectSize = (file, width, height) => {
+      const buffer = fs.readFileSync(path.join(ROOT, file.replace(/^\//, '')));
       expect(buffer.readUInt32BE(16)).toBe(width);
       expect(buffer.readUInt32BE(20)).toBe(height);
+    };
+    expectSize(manifest.images.small, 250, 175);
+    expectSize(manifest.images.large, 500, 350);
+    expectSize(manifest.images.xlarge, 1000, 700);
+    for (const driver of manifest.drivers) {
+      expectSize(driver.images.small, 75, 75);
+      expectSize(driver.images.large, 500, 500);
+      expectSize(driver.images.xlarge, 1000, 1000);
     }
   });
 });

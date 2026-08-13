@@ -4,15 +4,19 @@ Make your garage door a **real garage door in Homey** — even though it is actu
 
 Works with any hardware Homey can see: Shelly or other relays, Aqara/Zigbee/Z-Wave contact sensors, wired sensors — this app never talks to specific brands.
 
-## Three ways to use it
+## Three device types
 
-**Managed mode (recommended for most doors).** You pick the relay that triggers your door, the sensor that detects "fully closed", optionally a second sensor for "fully open", and how long the door takes to travel. The app then operates the door and tracks its state by itself. **No Flows needed.**
+When you add a device, the app offers three separate types — each with only its own settings and setup steps:
 
-**Auto-closing gate mode (for shared entrance gates).** For gates that open on a pulse and close again by themselves, with no sensors at all: pick only the relay and three times, and the app animates the open→hold→close cycle on timers. Every trigger simply means "open / stay open".
+**Garage Door (Managed)** — recommended for most doors. You pick the relay that triggers your door, the sensor that detects "fully closed", optionally a second sensor for "fully open", and how long the door takes to travel. The app then operates the door and tracks its state by itself. **No Flows needed.**
 
-**Flow controlled mode (maximum control).** The device is a pure shell: when someone asks it to open or close, it only fires a Flow trigger, and its state only changes when your own Advanced Flows report it. All logic — safety checks, relay pulses, sensor interpretation — lives visibly in your Flows.
+**Auto-closing Gate** — for shared entrance gates that open on a pulse and close again by themselves, with no sensors at all: pick only the relay and three times, and the app animates the open→hold→close cycle on timers. Every trigger simply means "open / stay open".
 
-Modes can be mixed freely across devices, and you can have as many virtual garage doors as you have doors and gates.
+**Garage Door (Flow controlled)** — maximum control. The device is a pure shell: when someone asks it to open or close, it only fires a Flow trigger, and its state only changes when your own Advanced Flows report it. All logic — safety checks, relay pulses, sensor interpretation — lives visibly in your Flows.
+
+Mix types freely and add as many devices as you have doors and gates. All types share the same Flow cards.
+
+> **Upgrading from v0.4 or earlier?** The old combined device type (with the mode setting) was removed. Delete your old Virtual Garage Door devices and add them again as the new types — then re-assign their HomeKit rooms and re-select the devices in any Flows that used them.
 
 ---
 
@@ -31,11 +35,10 @@ Also time your door once with a stopwatch: how many seconds from fully closed to
 
 ### Adding the door
 
-1. Homey app → **Devices** → **+** → **Virtual Garage Door**.
-2. Choose **Managed — no Flows needed**.
-3. Pick your relay, your closed sensor, optionally your open sensor, and enter the travel time.
-4. For each sensor, tell the app what "at the endpoint" looks like: *the door is fully closed when this sensor reports contact closed* (the normal case) or *contact open* (if your sensor is mounted the other way around).
-5. Add the device, name it (e.g. "Garage"), done.
+1. Homey app → **Devices** → **+** → **Virtual Garage Door** → **Garage Door (Managed)**.
+2. Pick your relay, your closed sensor, optionally your open sensor, and enter the travel time.
+3. For each sensor, tell the app what "at the endpoint" looks like: *the door is fully closed when this sensor reports contact closed* (the normal case) or *contact open* (if your sensor is mounted the other way around).
+4. Add the device, name it (e.g. "Garage"), done.
 
 Tap the tile: the relay pulses, the state shows *Opening*, and then *Open* — confirmed by your sensor if you have one at the top, otherwise when the travel time has passed. In Apple Home (via HomeKitty) the door appears as a real garage door.
 
@@ -56,7 +59,7 @@ Tap the tile: the relay pulses, the state shows *Opening*, and then *Open* — c
 
 Typical example: the shared entrance gate of an apartment building. A pulse makes it open (~10 s), it stays open for a while (~30 s), then closes by itself (~10 s) — and pressing the button again *always* means "up": while closing it reverses, while open it stays open longer. There is no sensor and none is needed.
 
-1. Devices → **+** → Virtual Garage Door → **Auto-closing gate — timer only**.
+1. Devices → **+** → Virtual Garage Door → **Auto-closing Gate**.
 2. Pick the relay that triggers the gate (auto-off configured on the relay itself, as always).
 3. Enter the three times. Two good ways to fill them in:
    * **Honest:** the real values (e.g. 10 / 30 / 10). The tile mirrors what the gate is actually doing.
@@ -73,7 +76,7 @@ What you get:
 
 ## Setting up Flow controlled mode
 
-Choose **Flow controlled** when adding the device. The contract is simple:
+Add a **Garage Door (Flow controlled)** device. The contract is simple:
 
 * When anything (Apple Home, the tile, a Flow) asks the door to move, the device fires **"Open was requested"** / **"Close was requested"** — and nothing else happens. In the Homey app you'll see "Open requested — waiting for a Flow to report the actual state"; that message is by design.
 * The state changes **only** when a Flow runs **"Report the door state as …"** (Closed / Opening / Open / Closing / Stopped).
@@ -136,6 +139,7 @@ Every door and gate has a **Restrictions** setting: *"Only allow opening when so
 
 Worth knowing:
 
+* **"Home" means Homey's own user presence** (set by the Homey app's location services or by toggling yourself home/away manually in the Homey app) — not your phone's Wi-Fi. Switching off Wi-Fi or location sharing does not mark you away; it just freezes your last known presence, so Homey most likely still considers you home. Test the restriction by setting yourself to Away in the Homey app.
 * **Closing is never blocked** — you always want to be able to close, especially when away.
 * It governs this virtual device only; physical remotes and wall buttons are outside the app's reach.
 * If presence cannot be determined (API hiccup), opening is **allowed** — a glitch should never lock you out of your own garage.

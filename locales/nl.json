@@ -1,15 +1,6 @@
 {
   "pair": {
     "defaultName": "Virtuele garagedeur",
-    "mode": {
-      "title": "Hoe moet deze garagedeur werken?",
-      "managedTitle": "Beheerd — geen Flows nodig",
-      "managedDesc": "Kies het relais dat je deur aanstuurt en de sensor die detecteert dat de deur dicht is. De app bedient de deur en houdt zelf de status bij.",
-      "flowTitle": "Flow-gestuurd",
-      "flowDesc": "Je eigen Advanced Flows reageren op open/sluit-verzoeken, bedienen de hardware en rapporteren de deurstatus terug. Maximale controle.",
-      "gateTitle": "Zelfsluitende poort — alleen timers",
-      "gateDesc": "Voor gedeelde toegangspoorten die openen op een puls en vanzelf weer sluiten. Geen sensoren: de app animeert de cyclus met timers en elke trigger betekent simpelweg \"openen / open blijven\"."
-    },
     "gate": {
       "control": "Welk apparaat stuurt de poort aan?",
       "opening": "Openen (s)",
@@ -32,7 +23,8 @@
       "travelHint": "Meet hoe lang de deur erover doet en tel er 10–20% bij op. Voorbeeld: de deur doet er ~15 seconden over, vul 18 in.",
       "save": "Doorgaan",
       "saveRepair": "Opslaan"
-    }
+    },
+    "gateName": "Zelfsluitende poort"
   },
   "request": {
     "open": "Openen gevraagd — wacht tot een Flow de werkelijke status rapporteert.",

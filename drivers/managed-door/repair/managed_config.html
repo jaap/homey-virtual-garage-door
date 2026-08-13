@@ -23,30 +23,12 @@
     <div class="vgd-hint" data-i18n="pair.config.controlHint">Usually the relay wired to your garage opener (for example a Shelly). Configure the relay itself to switch off automatically (momentary / auto-off) — this app only switches it on.</div>
   </div>
 
-  <div id="vgd-gate-section" style="display: none">
-    <div class="vgd-field" style="display: flex; gap: 10px">
-      <div style="flex: 1">
-        <label for="vgd-gate-opening" data-i18n="pair.gate.opening">Opening (s)</label>
-        <input id="vgd-gate-opening" type="number" min="1" max="300" step="1" value="10" />
-      </div>
-      <div style="flex: 1">
-        <label for="vgd-gate-hold" data-i18n="pair.gate.hold">Open (s)</label>
-        <input id="vgd-gate-hold" type="number" min="1" max="600" step="1" value="30" />
-      </div>
-      <div style="flex: 1">
-        <label for="vgd-gate-closing" data-i18n="pair.gate.closing">Closing (s)</label>
-        <input id="vgd-gate-closing" type="number" min="1" max="300" step="1" value="10" />
-      </div>
-    </div>
-    <div class="vgd-hint" data-i18n="pair.gate.hint">These only animate the tile — the gate itself keeps its own timing. Honest values mirror reality; short values (for example 3 / 3 / 1) bring the tile back to Closed within seconds, so the gate can immediately be triggered again — also from Apple Home, whose garage tile only accepts a new Open once it shows Closed.</div>
-  </div>
-
-  <div class="vgd-field vgd-sensor-section">
+  <div class="vgd-field">
     <label for="vgd-closed" data-i18n="pair.config.closed">Which sensor detects that the door is fully closed?</label>
     <select id="vgd-closed"></select>
   </div>
 
-  <div class="vgd-field vgd-sensor-section">
+  <div class="vgd-field">
     <label for="vgd-closed-meaning" data-i18n="pair.config.closedMeaning">The door is fully closed when this sensor reports:</label>
     <select id="vgd-closed-meaning">
       <option value="default" data-i18n="pair.config.meaningDefault">Contact closed / switch on (default)</option>
@@ -54,7 +36,7 @@
     </select>
   </div>
 
-  <div class="vgd-field vgd-sensor-section">
+  <div class="vgd-field">
     <label for="vgd-open" data-i18n="pair.config.open">Which sensor detects that the door is fully open? (optional)</label>
     <select id="vgd-open"></select>
   </div>
@@ -67,7 +49,7 @@
     </select>
   </div>
 
-  <div class="vgd-field vgd-sensor-section">
+  <div class="vgd-field">
     <label for="vgd-travel" data-i18n="pair.config.travel">Expected travel time (seconds)</label>
     <input id="vgd-travel" type="number" min="5" max="120" step="1" value="20" />
     <div class="vgd-hint" data-i18n="pair.config.travelHint">Time your door and add 10–20% margin. Example: the door takes ~15 seconds, so enter 18.</div>
@@ -92,7 +74,6 @@
     });
 
     var sensorsById = [];
-    var configMode = 'managed';
 
     function option(value, label) {
       var el = document.createElement('option');
@@ -124,17 +105,6 @@
       .then(function onData(results) {
         var data = results[0];
         var current = results[1] || {};
-        configMode = current.mode === 'gate' ? 'gate' : 'managed';
-
-        if (configMode === 'gate') {
-          document.querySelectorAll('.vgd-sensor-section').forEach(function hide(el) {
-            el.style.display = 'none';
-          });
-          document.getElementById('vgd-gate-section').style.display = '';
-          if (current.gateOpeningTime) document.getElementById('vgd-gate-opening').value = current.gateOpeningTime;
-          if (current.gateHoldTime) document.getElementById('vgd-gate-hold').value = current.gateHoldTime;
-          if (current.gateClosingTime) document.getElementById('vgd-gate-closing').value = current.gateClosingTime;
-        }
 
         var controlSelect = document.getElementById('vgd-control');
         data.controls.forEach(function add(control) {
@@ -172,31 +142,20 @@
 
     document.getElementById('vgd-save').addEventListener('click', function save() {
       var button = this;
-      var config;
-      if (configMode === 'gate') {
-        config = {
-          mode: 'gate',
-          controlDevice: { id: document.getElementById('vgd-control').value },
-          gateOpeningTime: Number(document.getElementById('vgd-gate-opening').value),
-          gateHoldTime: Number(document.getElementById('vgd-gate-hold').value),
-          gateClosingTime: Number(document.getElementById('vgd-gate-closing').value),
-        };
-      } else {
-        var closedIndex = document.getElementById('vgd-closed').value;
-        var openIndex = document.getElementById('vgd-open').value;
-        var closedSensor = sensorsById[Number(closedIndex)];
-        var openSensor = openIndex === '' ? null : sensorsById[Number(openIndex)];
+      var closedIndex = document.getElementById('vgd-closed').value;
+      var openIndex = document.getElementById('vgd-open').value;
+      var closedSensor = sensorsById[Number(closedIndex)];
+      var openSensor = openIndex === '' ? null : sensorsById[Number(openIndex)];
 
-        config = {
-          mode: 'managed',
-          controlDevice: { id: document.getElementById('vgd-control').value },
-          closedSensor: closedSensor ? { id: closedSensor.deviceId, capability: closedSensor.capabilityId } : null,
-          openSensor: openSensor ? { id: openSensor.deviceId, capability: openSensor.capabilityId } : null,
-          closedSensorMeaning: document.getElementById('vgd-closed-meaning').value,
-          openSensorMeaning: document.getElementById('vgd-open-meaning').value,
-          travelTime: Number(document.getElementById('vgd-travel').value),
-        };
-      }
+      var config = {
+        mode: 'managed',
+        controlDevice: { id: document.getElementById('vgd-control').value },
+        closedSensor: closedSensor ? { id: closedSensor.deviceId, capability: closedSensor.capabilityId } : null,
+        openSensor: openSensor ? { id: openSensor.deviceId, capability: openSensor.capabilityId } : null,
+        closedSensorMeaning: document.getElementById('vgd-closed-meaning').value,
+        openSensorMeaning: document.getElementById('vgd-open-meaning').value,
+        travelTime: Number(document.getElementById('vgd-travel').value),
+      };
 
       button.disabled = true;
       Homey.emit('set_managed_config', config)
