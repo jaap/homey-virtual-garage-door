@@ -5,7 +5,8 @@
  * committed) using only Node.js built-ins — run `npm run images` after
  * changing the artwork or brand color, then commit the result.
  *
- * The artwork mirrors assets/icon.svg: a white garage-door glyph centered
+ * The artwork mirrors the icon.svg files: a white glyph (the garage for
+ * the app and door drivers, the fence gate for the gate driver) centered
  * on the brand-color background at 52% of the image height, anti-aliased
  * with signed distance fields.
  */
@@ -20,38 +21,54 @@ const BACKGROUND = [0x2e, 0x56, 0xb5]; // must match brandColor in .homeycompose
 const GLYPH_COLOR = [0xff, 0xff, 0xff];
 const GLYPH_HEIGHT_FRACTION = 0.52;
 
-const DRIVERS = ['flow-door', 'managed-door', 'gate'];
+const DRIVERS = [
+  { id: 'flow-door', glyph: 'garage' },
+  { id: 'managed-door', glyph: 'garage' },
+  { id: 'gate', glyph: 'gate' },
+];
 
 const IMAGES = [
-  { file: 'assets/images/small.png', width: 250, height: 175 },
-  { file: 'assets/images/large.png', width: 500, height: 350 },
-  { file: 'assets/images/xlarge.png', width: 1000, height: 700 },
-  ...DRIVERS.flatMap(driver => [
-    { file: `drivers/${driver}/assets/images/small.png`, width: 75, height: 75 },
-    { file: `drivers/${driver}/assets/images/large.png`, width: 500, height: 500 },
-    { file: `drivers/${driver}/assets/images/xlarge.png`, width: 1000, height: 1000 },
+  { file: 'assets/images/small.png', width: 250, height: 175, glyph: 'garage' },
+  { file: 'assets/images/large.png', width: 500, height: 350, glyph: 'garage' },
+  { file: 'assets/images/xlarge.png', width: 1000, height: 700, glyph: 'garage' },
+  ...DRIVERS.flatMap(({ id, glyph }) => [
+    { file: `drivers/${id}/assets/images/small.png`, width: 75, height: 75, glyph },
+    { file: `drivers/${id}/assets/images/large.png`, width: 500, height: 500, glyph },
+    { file: `drivers/${id}/assets/images/xlarge.png`, width: 1000, height: 1000, glyph },
   ]),
 ];
 
 // --- glyph geometry, in the icon's 0..100 coordinate space ---------------
 
-// Convex house silhouette: apex, eaves, feet.
-const HOUSE = [
-  [50, 7],
-  [96, 41],
+// Wide garage silhouette: apex, eaves, feet (mirrors assets/icon.svg).
+const GARAGE = [
+  [50, 12],
+  [96, 38],
   [96, 94],
   [4, 94],
-  [4, 41],
+  [4, 38],
 ];
 
-// Door opening cut out of the house, open at the bottom.
-const DOOR = { x: 18, y: 53.5, w: 64, h: 42 };
+// Door opening cut out of the garage, open at the bottom.
+const DOOR = { x: 14, y: 48, w: 72, h: 48 };
 
-// Three rounded door slats.
+// Four rounded sectional-door slats.
 const SLATS = [
-  { x: 23, y: 59, w: 54, h: 8, r: 2.5 },
-  { x: 23, y: 72, w: 54, h: 8, r: 2.5 },
-  { x: 23, y: 85, w: 54, h: 8, r: 2.5 },
+  { x: 18, y: 52, w: 64, h: 7.5, r: 2.5 },
+  { x: 18, y: 62.5, w: 64, h: 7.5, r: 2.5 },
+  { x: 18, y: 73, w: 64, h: 7.5, r: 2.5 },
+  { x: 18, y: 83.5, w: 64, h: 7.5, r: 2.5 },
+];
+
+// Fence-style gate: posts, rails and bars (mirrors drivers/gate/assets/icon.svg).
+const GATE_RECTS = [
+  { x: 6, y: 20, w: 12, h: 73, r: 2.5 },
+  { x: 82, y: 20, w: 12, h: 73, r: 2.5 },
+  { x: 14, y: 38, w: 72, h: 8, r: 2.5 },
+  { x: 14, y: 64, w: 72, h: 8, r: 2.5 },
+  { x: 28, y: 26, w: 9, h: 67, r: 2.5 },
+  { x: 45.5, y: 26, w: 9, h: 67, r: 2.5 },
+  { x: 63, y: 26, w: 9, h: 67, r: 2.5 },
 ];
 
 // Signed distance to a convex polygon (negative inside): the maximum of the
@@ -72,11 +89,11 @@ function polygonEdges(points) {
   return edges;
 }
 
-const HOUSE_EDGES = polygonEdges(HOUSE);
+const GARAGE_EDGES = polygonEdges(GARAGE);
 
-function houseDistance(x, y) {
+function garageBodyDistance(x, y) {
   let d = -Infinity;
-  for (const { nx, ny, b } of HOUSE_EDGES) {
+  for (const { nx, ny, b } of GARAGE_EDGES) {
     d = Math.max(d, nx * x + ny * y - b);
   }
   return d;
@@ -96,18 +113,28 @@ function rectDistance(x, y, rect) {
   return outside + inside - r;
 }
 
-function glyphDistance(x, y) {
-  // house minus door opening, plus the slats
-  let d = Math.max(houseDistance(x, y), -rectDistance(x, y, DOOR));
-  for (const slat of SLATS) {
-    d = Math.min(d, rectDistance(x, y, slat));
-  }
-  return d;
-}
+const GLYPHS = {
+  // garage minus door opening, plus the slats
+  garage(x, y) {
+    let d = Math.max(garageBodyDistance(x, y), -rectDistance(x, y, DOOR));
+    for (const slat of SLATS) {
+      d = Math.min(d, rectDistance(x, y, slat));
+    }
+    return d;
+  },
+  // union of the gate's posts, rails and bars
+  gate(x, y) {
+    let d = Infinity;
+    for (const rect of GATE_RECTS) {
+      d = Math.min(d, rectDistance(x, y, rect));
+    }
+    return d;
+  },
+};
 
 // --- rasterization -------------------------------------------------------
 
-function renderImage(width, height) {
+function renderImage(width, height, glyphDistance) {
   const glyphSize = height * GLYPH_HEIGHT_FRACTION; // pixels for 100 glyph units
   const scale = glyphSize / 100;
   const offsetX = (width - glyphSize) / 2;
@@ -200,9 +227,9 @@ for (const leftover of ['garagedoor']) {
   }
 }
 
-for (const { file, width, height } of IMAGES) {
+for (const { file, width, height, glyph } of IMAGES) {
   const target = path.join(ROOT, file);
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, encodePng(width, height, renderImage(width, height)));
-  console.log(`generated ${file} (${width}x${height})`);
+  fs.writeFileSync(target, encodePng(width, height, renderImage(width, height, GLYPHS[glyph])));
+  console.log(`generated ${file} (${width}x${height}, ${glyph})`);
 }
