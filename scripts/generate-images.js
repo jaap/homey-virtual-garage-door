@@ -60,15 +60,23 @@ const SLATS = [
   { x: 18, y: 83.5, w: 64, h: 7.5, r: 2.5 },
 ];
 
-// Fence-style gate: posts, rails and bars (mirrors drivers/gate/assets/icon.svg).
+// Two-leaf swing gate between ball-topped posts, hanging just above the
+// ground (mirrors drivers/gate/assets/icon.svg).
 const GATE_RECTS = [
-  { x: 6, y: 20, w: 12, h: 73, r: 2.5 },
-  { x: 82, y: 20, w: 12, h: 73, r: 2.5 },
-  { x: 14, y: 38, w: 72, h: 8, r: 2.5 },
-  { x: 14, y: 64, w: 72, h: 8, r: 2.5 },
-  { x: 28, y: 26, w: 9, h: 67, r: 2.5 },
-  { x: 45.5, y: 26, w: 9, h: 67, r: 2.5 },
-  { x: 63, y: 26, w: 9, h: 67, r: 2.5 },
+  { x: 6.5, y: 23, w: 9, h: 9, r: 4.5 }, // finials
+  { x: 84.5, y: 23, w: 9, h: 9, r: 4.5 },
+  { x: 6, y: 30, w: 10, h: 63, r: 2.5 }, // posts
+  { x: 84, y: 30, w: 10, h: 63, r: 2.5 },
+  { x: 14, y: 38, w: 32, h: 5, r: 2.5 }, // rails, reaching into the posts
+  { x: 14, y: 83, w: 32, h: 5, r: 2.5 },
+  { x: 54, y: 38, w: 32, h: 5, r: 2.5 },
+  { x: 54, y: 83, w: 32, h: 5, r: 2.5 },
+  { x: 20, y: 38, w: 4, h: 50, r: 2 }, // bars
+  { x: 31, y: 38, w: 4, h: 50, r: 2 },
+  { x: 42, y: 38, w: 4, h: 50, r: 2 },
+  { x: 54, y: 38, w: 4, h: 50, r: 2 },
+  { x: 65, y: 38, w: 4, h: 50, r: 2 },
+  { x: 76, y: 38, w: 4, h: 50, r: 2 },
 ];
 
 // Signed distance to a convex polygon (negative inside): the maximum of the
