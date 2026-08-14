@@ -4,6 +4,7 @@
     "nl": "Garagedeur (Beheerd)"
   },
   "class": "garagedoor",
+  "icon": "/drivers/managed-door/assets/icon.svg",
   "capabilities": [
     "garagedoor_closed",
     "garagedoor_state"

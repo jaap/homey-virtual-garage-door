@@ -4,6 +4,7 @@
     "nl": "Zelfsluitende poort"
   },
   "class": "garagedoor",
+  "icon": "/drivers/gate/assets/icon.svg",
   "capabilities": [
     "garagedoor_closed",
     "garagedoor_state",

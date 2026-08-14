@@ -171,7 +171,11 @@ describe('app manifest', () => {
     ];
     for (const driver of manifest.drivers) {
       assets.push(...Object.values(driver.images));
-      assets.push(`/drivers/${driver.id}/assets/icon.svg`);
+      // The icon must also be declared in the manifest — the App Store
+      // renders flow cards with the driver icon it finds there, not by
+      // probing the conventional path.
+      expect(driver.icon).toBe(`/drivers/${driver.id}/assets/icon.svg`);
+      assets.push(driver.icon);
     }
     for (const assetPath of assets) {
       expect(fs.existsSync(path.join(ROOT, assetPath.replace(/^\//, '')))).toBe(true);

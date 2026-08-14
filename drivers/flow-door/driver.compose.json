@@ -4,6 +4,7 @@
     "nl": "Garagedeur (Flow-gestuurd)"
   },
   "class": "garagedoor",
+  "icon": "/drivers/flow-door/assets/icon.svg",
   "capabilities": [
     "garagedoor_closed",
     "garagedoor_state"
