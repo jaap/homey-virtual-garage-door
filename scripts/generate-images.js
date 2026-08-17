@@ -3,12 +3,15 @@
 /**
  * Regenerates the PNG images required by the Homey app manifest (which are
  * committed) using only Node.js built-ins — run `npm run images` after
- * changing the artwork or brand color, then commit the result.
+ * changing the artwork, then commit the result.
  *
- * The artwork mirrors the icon.svg files: a white glyph (the garage for
- * the app and door drivers, the fence gate for the gate driver) centered
- * on the brand-color background at 52% of the image height, anti-aliased
- * with signed distance fields.
+ * The images are flat-design illustrations rendered with signed distance
+ * fields and painter's-algorithm compositing:
+ *  - app images: a garage with its door mid-travel next to the auto-closing
+ *    gate, on a soft sky gradient (the App Store wants a designed graphic,
+ *    not an icon on a plain background);
+ *  - driver images: a unique product-style graphic per driver on a white
+ *    background, as the App Store guidelines require.
  */
 
 const fs = require('fs');
@@ -17,70 +20,25 @@ const zlib = require('zlib');
 
 const ROOT = path.join(__dirname, '..');
 
-const BACKGROUND = [0x2e, 0x56, 0xb5]; // must match brandColor in .homeycompose/app.json
-const GLYPH_COLOR = [0xff, 0xff, 0xff];
-const GLYPH_HEIGHT_FRACTION = 0.52;
+const C = {
+  white: [0xff, 0xff, 0xff],
+  skyTop: [0xe9, 0xf0, 0xfa],
+  skyBottom: [0xfb, 0xfd, 0xff],
+  ground: [0xdc, 0xe5, 0xf2],
+  shadow: [0x33, 0x41, 0x5c],
+  rim: [0x9d, 0xb0, 0xcc],
+  roof: [0x33, 0x41, 0x5c],
+  wall: [0xf4, 0xf7, 0xfb],
+  frame: [0xc7, 0xd2, 0xe4],
+  doorBase: [0x26, 0x47, 0x9b],
+  slat: [0x3d, 0x66, 0xc9],
+  opening: [0x1b, 0x23, 0x33],
+  green: [0x2f, 0xbf, 0x71],
+  grey: [0xa9, 0xb8, 0xd4],
+};
 
-const DRIVERS = [
-  { id: 'flow-door', glyph: 'garage' },
-  { id: 'managed-door', glyph: 'garage' },
-  { id: 'gate', glyph: 'gate' },
-];
+// --- signed distance helpers (negative inside) ---------------------------
 
-const IMAGES = [
-  { file: 'assets/images/small.png', width: 250, height: 175, glyph: 'garage' },
-  { file: 'assets/images/large.png', width: 500, height: 350, glyph: 'garage' },
-  { file: 'assets/images/xlarge.png', width: 1000, height: 700, glyph: 'garage' },
-  ...DRIVERS.flatMap(({ id, glyph }) => [
-    { file: `drivers/${id}/assets/images/small.png`, width: 75, height: 75, glyph },
-    { file: `drivers/${id}/assets/images/large.png`, width: 500, height: 500, glyph },
-    { file: `drivers/${id}/assets/images/xlarge.png`, width: 1000, height: 1000, glyph },
-  ]),
-];
-
-// --- glyph geometry, in the icon's 0..100 coordinate space ---------------
-
-// Wide garage silhouette: apex, eaves, feet (mirrors assets/icon.svg).
-const GARAGE = [
-  [50, 12],
-  [96, 38],
-  [96, 94],
-  [4, 94],
-  [4, 38],
-];
-
-// Door opening cut out of the garage, open at the bottom.
-const DOOR = { x: 14, y: 48, w: 72, h: 48 };
-
-// Four rounded sectional-door slats.
-const SLATS = [
-  { x: 18, y: 52, w: 64, h: 7.5, r: 2.5 },
-  { x: 18, y: 62.5, w: 64, h: 7.5, r: 2.5 },
-  { x: 18, y: 73, w: 64, h: 7.5, r: 2.5 },
-  { x: 18, y: 83.5, w: 64, h: 7.5, r: 2.5 },
-];
-
-// Two-leaf swing gate between ball-topped posts, hanging just above the
-// ground (mirrors drivers/gate/assets/icon.svg).
-const GATE_RECTS = [
-  { x: 6.5, y: 23, w: 9, h: 9, r: 4.5 }, // finials
-  { x: 84.5, y: 23, w: 9, h: 9, r: 4.5 },
-  { x: 6, y: 30, w: 10, h: 63, r: 2.5 }, // posts
-  { x: 84, y: 30, w: 10, h: 63, r: 2.5 },
-  { x: 14, y: 38, w: 32, h: 5, r: 2.5 }, // rails, reaching into the posts
-  { x: 14, y: 83, w: 32, h: 5, r: 2.5 },
-  { x: 54, y: 38, w: 32, h: 5, r: 2.5 },
-  { x: 54, y: 83, w: 32, h: 5, r: 2.5 },
-  { x: 20, y: 38, w: 4, h: 50, r: 2 }, // bars
-  { x: 31, y: 38, w: 4, h: 50, r: 2 },
-  { x: 42, y: 38, w: 4, h: 50, r: 2 },
-  { x: 54, y: 38, w: 4, h: 50, r: 2 },
-  { x: 65, y: 38, w: 4, h: 50, r: 2 },
-  { x: 76, y: 38, w: 4, h: 50, r: 2 },
-];
-
-// Signed distance to a convex polygon (negative inside): the maximum of the
-// signed distances to the outward half-plane of each edge.
 function polygonEdges(points) {
   const edges = [];
   for (let i = 0; i < points.length; i++) {
@@ -97,71 +55,156 @@ function polygonEdges(points) {
   return edges;
 }
 
-const GARAGE_EDGES = polygonEdges(GARAGE);
+function poly(points) {
+  const edges = polygonEdges(points);
+  return (x, y) => {
+    let d = -Infinity;
+    for (const { nx, ny, b } of edges) {
+      d = Math.max(d, nx * x + ny * y - b);
+    }
+    return d;
+  };
+}
 
-function garageBodyDistance(x, y) {
-  let d = -Infinity;
-  for (const { nx, ny, b } of GARAGE_EDGES) {
-    d = Math.max(d, nx * x + ny * y - b);
+function rect(rx, ry, w, h, r = 0) {
+  const cx = rx + w / 2;
+  const cy = ry + h / 2;
+  const hx = w / 2 - r;
+  const hy = h / 2 - r;
+  return (x, y) => {
+    const qx = Math.abs(x - cx) - hx;
+    const qy = Math.abs(y - cy) - hy;
+    const outside = Math.hypot(Math.max(qx, 0), Math.max(qy, 0));
+    const inside = Math.min(Math.max(qx, qy), 0);
+    return outside + inside - r;
+  };
+}
+
+const circle = (cx, cy, r) => rect(cx - r, cy - r, 2 * r, 2 * r, r);
+const inset = (dist, amount) => (x, y) => dist(x, y) + amount;
+const intersect = (a, b) => (x, y) => Math.max(a(x, y), b(x, y));
+const below = edgeY => (x, y) => edgeY - y; // inside where y > edgeY
+const transform = (dist, { dx = 0, dy = 0, s = 1 }) => (x, y) => dist((x - dx) / s, (y - dy) / s) * s;
+
+// --- the buildings, in their own 0..100 coordinate space -----------------
+
+/**
+ * A garage facade: rim outline, dark roof band, light walls, door frame and
+ * either a closed sectional door or a raised one showing the dark opening.
+ * With `sensors`, two contact-sensor dots mark the managed variant.
+ */
+function garageLayers({ raised = false, sensors = false } = {}) {
+  const building = poly([[50, 14], [94, 40], [94, 90], [6, 90], [6, 40]]);
+  const layers = [
+    { dist: rect(10, 86.8, 80, 4.6, 2.3), color: C.shadow, alpha: 0.16, blur: 5 },
+    { dist: building, color: C.rim },
+    { dist: inset(building, 1.6), color: C.roof },
+    { dist: intersect(inset(building, 1.6), below(43)), color: C.wall },
+    { dist: rect(19, 49, 62, 41, 1.5), color: C.frame },
+    { dist: rect(22, 52, 56, 38), color: raised ? C.opening : C.doorBase },
+  ];
+  const slatYs = raised
+    ? [52, 56.6, 61.2] // compressed stack at the top of the opening
+    : [53.5, 63, 72.5, 82];
+  for (const y of slatYs) {
+    layers.push({ dist: rect(24, y, 52, raised ? 3.6 : 7, 1.6), color: C.slat });
   }
-  return d;
+  if (sensors) {
+    layers.push({ dist: circle(87.6, 86, 2.7), color: C.green });
+    layers.push({ dist: circle(87.6, 54, 2.7), color: C.grey });
+  }
+  return layers;
 }
 
-// Signed distance to an axis-aligned rectangle with corner radius r.
-function rectDistance(x, y, rect) {
-  const r = rect.r || 0;
-  const cx = rect.x + rect.w / 2;
-  const cy = rect.y + rect.h / 2;
-  const hx = rect.w / 2 - r;
-  const hy = rect.h / 2 - r;
-  const qx = Math.abs(x - cx) - hx;
-  const qy = Math.abs(y - cy) - hy;
-  const outside = Math.hypot(Math.max(qx, 0), Math.max(qy, 0));
-  const inside = Math.min(Math.max(qx, qy), 0);
-  return outside + inside - r;
+/** The two-leaf entrance gate, colored like the rest of the family. */
+function gateLayers() {
+  const layers = [
+    { dist: rect(8, 89.2, 84, 4.2, 2.1), color: C.shadow, alpha: 0.16, blur: 5 },
+    { dist: circle(11, 26.5, 4.5), color: C.roof },
+    { dist: circle(89, 26.5, 4.5), color: C.roof },
+    { dist: rect(6, 30, 10, 63, 2.5), color: C.roof },
+    { dist: rect(84, 30, 10, 63, 2.5), color: C.roof },
+  ];
+  for (const [rx, w] of [[14, 32], [54, 32]]) {
+    layers.push({ dist: rect(rx, 38, w, 5, 2.5), color: C.slat });
+    layers.push({ dist: rect(rx, 83, w, 5, 2.5), color: C.slat });
+  }
+  for (const rx of [20, 31, 42, 54, 65, 76]) {
+    layers.push({ dist: rect(rx, 38, 4, 50, 2), color: C.slat });
+  }
+  return layers;
 }
 
-const GLYPHS = {
-  // garage minus door opening, plus the slats
-  garage(x, y) {
-    let d = Math.max(garageBodyDistance(x, y), -rectDistance(x, y, DOOR));
-    for (const slat of SLATS) {
-      d = Math.min(d, rectDistance(x, y, slat));
-    }
-    return d;
+const offsetLayers = (layers, t) => layers.map(layer => ({ ...layer, dist: transform(layer.dist, t) }));
+
+// --- scenes --------------------------------------------------------------
+
+const SCENES = {
+  app: {
+    background: (x, y) => {
+      const t = Math.min(1, Math.max(0, y / 100));
+      return C.skyTop.map((v, i) => v + (C.skyBottom[i] - v) * t);
+    },
+    layers: [
+      { dist: below(84), color: C.ground },
+      ...offsetLayers(garageLayers({ raised: true }), { dx: -4, dy: 84 - 90 * 0.9, s: 0.9 }),
+      ...offsetLayers(gateLayers(), { dx: 82, dy: 84 - 93 * 0.4, s: 0.4 }),
+    ],
   },
-  // union of the gate's posts, rails and bars
-  gate(x, y) {
-    let d = Infinity;
-    for (const rect of GATE_RECTS) {
-      d = Math.min(d, rectDistance(x, y, rect));
-    }
-    return d;
+  'flow-door': {
+    background: () => C.white,
+    layers: garageLayers({ raised: false }),
+  },
+  'managed-door': {
+    background: () => C.white,
+    layers: garageLayers({ raised: true, sensors: true }),
+  },
+  gate: {
+    background: () => C.white,
+    layers: gateLayers(),
   },
 };
 
+const IMAGES = [
+  { file: 'assets/images/small.png', width: 250, height: 175, scene: 'app' },
+  { file: 'assets/images/large.png', width: 500, height: 350, scene: 'app' },
+  { file: 'assets/images/xlarge.png', width: 1000, height: 700, scene: 'app' },
+  ...['flow-door', 'managed-door', 'gate'].flatMap(driver => [
+    { file: `drivers/${driver}/assets/images/small.png`, width: 75, height: 75, scene: driver },
+    { file: `drivers/${driver}/assets/images/large.png`, width: 500, height: 500, scene: driver },
+    { file: `drivers/${driver}/assets/images/xlarge.png`, width: 1000, height: 1000, scene: driver },
+  ]),
+];
+
 // --- rasterization -------------------------------------------------------
 
-function renderImage(width, height, glyphDistance) {
-  const glyphSize = height * GLYPH_HEIGHT_FRACTION; // pixels for 100 glyph units
-  const scale = glyphSize / 100;
-  const offsetX = (width - glyphSize) / 2;
-  const offsetY = (height - glyphSize) / 2;
+function renderScene(width, height, scene, margin = 0.82) {
+  // scene units: the y axis spans 0..100 over `margin` of the image height,
+  // centered; x is centered on 50 with the same scale
+  const unit = (height * margin) / 100;
+  const offsetY = (height - 100 * unit) / 2;
 
-  const stride = 1 + width * 3; // one PNG filter byte per row
+  const stride = 1 + width * 3;
   const raw = Buffer.alloc(height * stride);
 
   for (let py = 0; py < height; py++) {
     const row = py * stride;
     raw[row] = 0; // filter type 0 (None)
-    const gy = (py + 0.5 - offsetY) / scale;
+    const y = (py + 0.5 - offsetY) / unit;
     for (let px = 0; px < width; px++) {
-      const gx = (px + 0.5 - offsetX) / scale;
-      const distancePx = glyphDistance(gx, gy) * scale;
-      const coverage = Math.min(1, Math.max(0, 0.5 - distancePx));
+      const x = (px + 0.5 - width / 2) / unit + 50;
+      let color = scene.background(x, y);
+      for (const layer of scene.layers) {
+        const distancePx = layer.dist(x, y) * unit;
+        const soft = Math.max(1, (layer.blur || 0) * unit);
+        const coverage = Math.min(1, Math.max(0, 0.5 - distancePx / soft)) * (layer.alpha ?? 1);
+        if (coverage > 0) {
+          color = color.map((v, i) => v + (layer.color[i] - v) * coverage);
+        }
+      }
       const at = row + 1 + px * 3;
       for (let c = 0; c < 3; c++) {
-        raw[at + c] = Math.round(BACKGROUND[c] + (GLYPH_COLOR[c] - BACKGROUND[c]) * coverage);
+        raw[at + c] = Math.round(color[c]);
       }
     }
   }
@@ -235,9 +278,9 @@ for (const leftover of ['garagedoor']) {
   }
 }
 
-for (const { file, width, height, glyph } of IMAGES) {
+for (const { file, width, height, scene } of IMAGES) {
   const target = path.join(ROOT, file);
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, encodePng(width, height, renderImage(width, height, GLYPHS[glyph])));
-  console.log(`generated ${file} (${width}x${height}, ${glyph})`);
+  fs.writeFileSync(target, encodePng(width, height, renderScene(width, height, SCENES[scene])));
+  console.log(`generated ${file} (${width}x${height}, ${scene})`);
 }
