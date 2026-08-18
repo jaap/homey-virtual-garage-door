@@ -82,6 +82,76 @@ The endpoints are facts: a sensor in contact pins the state, whoever moved the d
 
 The practical upshot: add an open sensor when you care about the difference between "the door should be open by now" and "the door *is* open" — for example when a Flow waters the plants only while the garage is really, truly open.
 
+### The state machine, drawn
+
+With **both sensors**, every settled state is anchored to a sensor. While the travel time runs, the direction comes from which sensor released (or which request you made); when it expires without reaching an endpoint, the door settles on **Stopped**, the honest name for "partly open, position unverified":
+
+```mermaid
+stateDiagram-v2
+    Closed --> Opening: open requested, or opened by hand
+    Opening --> Open: open sensor contact
+    Opening --> Closed: back onto the closed sensor
+    Opening --> Stopped: travel time up ⚠️
+    Open --> Closing: close requested, or closed by hand
+    Closing --> Closed: closed sensor contact
+    Closing --> Open: back onto the open sensor
+    Closing --> Stopped: travel time up ⚠️
+    Stopped --> Opening: open requested
+    Stopped --> Closing: close requested
+    Stopped --> Closed: closed sensor contact
+    Stopped --> Open: open sensor contact
+    note right of Stopped
+        Stopped is reachable only by a
+        failed or interrupted move and
+        always comes with a warning
+    end note
+```
+
+If both sensors report contact at the same time, the state freezes where it was, the device shows the configuration warning, and every request is refused until one sensor lets go; the remaining endpoint then wins.
+
+With **only a closed sensor**, the right half of the picture is missing, so the app makes exactly one assumption (an Opening that runs out of travel time becomes Open) and has exactly one blind spot (it cannot see a door leave Open by hand):
+
+```mermaid
+stateDiagram-v2
+    Closed --> Opening: open requested, or opened by hand
+    Opening --> Open: travel time up, assumed
+    Opening --> Closed: back onto the sensor
+    Open --> Closing: close requested
+    Open --> Closed: sensor contact, closed by hand
+    Closing --> Closed: sensor contact
+    Closing --> Stopped: travel time up ⚠️
+    Stopped --> Opening: open requested
+    Stopped --> Closing: close requested
+    Stopped --> Closed: sensor contact
+```
+
+And the travel-time watchdog itself, the part that decides what an expired timer means:
+
+```mermaid
+flowchart TD
+    T(["Travel time expires"]) --> D{Which move was running?}
+    D -->|opening| C{Closed sensor still in contact?}
+    C -->|yes| CC["Closed, plus the failed trigger: the door never moved"]
+    C -->|no| H{Open sensor configured?}
+    H -->|yes| S["Stopped ⚠️ it never reached the open sensor"]
+    H -->|no| O["Open, the one honest assumption"]
+    D -->|closing| S2["Stopped ⚠️ Closed is never claimed by a timer"]
+```
+
+### Worked examples
+
+Travel time 18 seconds in all of these.
+
+1. **A normal open, two sensors.** You tap the tile. The relay pulses, the closed sensor releases a moment later: *Opening*. Fourteen seconds in, the open sensor makes contact: **Open**. The timer is cancelled; nothing was assumed.
+2. **The same with one sensor.** Identical until the end: at 18 seconds without bad news, the app concludes **Open**. If the door had actually jammed halfway, the app cannot know; that is the trade-off this setup accepts.
+3. **Obstruction while closing.** The door reverses or stalls, the closed sensor never makes contact. At 18 seconds: **Stopped**, a warning on the tile, and the *door failed to reach its position* trigger fires with direction `closing`. A Flow on that trigger sending a phone notification is the single most useful automation this app offers.
+4. **Wall-button close.** Two sensors: the open sensor releases, *Closing*, then **Closed** on contact. One sensor: the app sees nothing until the closed sensor lands, so the tile jumps from *Open* straight to **Closed**. Same physical event, different amount of story.
+5. **Homey reboots mid-move.** No sensor in contact when the app wakes up: **Stopped** with two sensors, and with one sensor **Open** if the door was last known open or opening. Nothing is pulsed; the next sensor contact or your next request takes it from there.
+
+---
+
+## Setting up an auto-closing gate
+
 Typical example: the shared entrance gate of an apartment building. A pulse makes it open (~10 s), it stays open for a while (~30 s), then closes by itself (~10 s) — and pressing the button again *always* means "up": while closing it reverses, while open it stays open longer. There is no sensor and none is needed.
 
 1. Devices → **+** → Virtual Garage Door → **Auto-closing Gate**.
@@ -108,19 +178,25 @@ Add a **Garage Door (Flow controlled)** device. The contract is simple:
 
 One Advanced Flow canvas per door covers a Shelly + one Aqara closed-sensor setup:
 
-```text
-Lane 1  [Door] Open was requested
-          IF [Door] Is closed → pulse relay → Report as Opening
-          ELSE                → Report as Open          (settles Apple Home)
-
-Lane 2  [Door] Close was requested
-          IF [Door] is open   → pulse relay → Report as Closing
-          ELSE                → Report as Closed
-
-Lane 3  [Sensor] contact became closed → Report as Closed
-
-Lane 4  [Sensor] contact became open   → Report as Opening
-          (delay ≈ travel time) IF contact still open → Report as Open
+```mermaid
+flowchart LR
+    subgraph L1["Lane 1: requests to open"]
+        A(["Door: Open was requested"]) --> B{Door is closed?}
+        B -->|yes| C["Pulse the relay"] --> D["Report as Opening"]
+        B -->|no| E["Report as Open"]
+    end
+    subgraph L2["Lane 2: requests to close"]
+        F(["Door: Close was requested"]) --> G{Door is closed?}
+        G -->|no| H["Pulse the relay"] --> I["Report as Closing"]
+        G -->|yes| J["Report as Closed"]
+    end
+    subgraph L3["Lane 3: the sensor lands on closed"]
+        K(["Sensor: contact became closed"]) --> L["Report as Closed"]
+    end
+    subgraph L4["Lane 4: the sensor releases"]
+        M(["Sensor: contact became open"]) --> N["Report as Opening"] --> O["Wait ≈ travel time"] --> P{Contact still open?}
+        P -->|yes| Q["Report as Open"]
+    end
 ```
 
 Lanes 3–4 are unconditional ground truth: they keep the door honest when someone uses the wall button, and they re-sync everything after reboots. Add your own safety conditions to lanes 1–2. If a Flow denies a request, report the current state again — that snaps Apple Home out of "Opening…".
