@@ -66,9 +66,21 @@ Tap the tile: the relay pulses, the state shows *Opening*, and then *Open* — c
 * **Careful with pulses.** Requests are ignored with a clear message when the door is already there, already moving (a pulse mid-travel means stop/reverse/who-knows depending on the opener), or when the sensors contradict each other (both endpoints at once = check your setup). From **Stopped**, a new request pulses and assumes the direction you asked for; the sensors then correct it at the next endpoint.
 * **After a restart** the app re-reads the sensors and settles conservatively; between endpoints it reports **Stopped** rather than guessing (with a single sensor, a door last known open stays *Open*). It never pulses the relay by itself — not at startup, not ever, except when you ask it to move.
 
----
+### What the sensors mean for the state, case by case
 
-## Setting up an auto-closing gate
+The endpoints are facts: a sensor in contact pins the state, whoever moved the door. Everything *between* the endpoints is reasoned from the last known direction plus the travel-time watchdog — and that is where a second sensor changes the meaning of what you see. With one sensor, *Open* is partly an assumption; with two, *Open* is a measurement, and uncertainty is reported as **Stopped** instead of assumed away.
+
+| What the sensors say | With only a closed sensor | With closed + open sensors |
+|---|---|---|
+| Closed sensor in contact | **Closed** — always wins, ends any movement | Same |
+| Open sensor in contact | — | **Open** — a fact, not a guess |
+| Both in contact at once | — | State freezes, the device warns *check the sensor configuration*, and every open **and** close request is refused. The first sensor to let go resolves it: the remaining endpoint wins. |
+| Neither, right after an open request (or the closed sensor released on its own) | **Opening** while the travel time runs; when it expires, the app makes its one honest inference: **Open** | **Opening**; if the travel time expires without open contact: **Stopped**, a warning, and the *failed to reach position* trigger |
+| Neither, right after a close request | **Closing**; when the travel time expires: **Stopped** plus a warning — *Closed* is never claimed by a timer | Same — only the closed sensor can say *Closed* |
+| Neither, because someone started closing the fully open door by hand (wall button, car remote) | The app cannot see the door leave *Open*, so it stays **Open** until the closed sensor makes contact and snaps it to **Closed** | The open sensor releases → **Closing**, watchdog running |
+| Neither, right after Homey or the app restarts | **Open** if the door was last known open or opening, otherwise **Stopped** | **Stopped** — the direction of travel is unknowable, so nothing is guessed |
+
+The practical upshot: add an open sensor when you care about the difference between "the door should be open by now" and "the door *is* open" — for example when a Flow waters the plants only while the garage is really, truly open.
 
 Typical example: the shared entrance gate of an apartment building. A pulse makes it open (~10 s), it stays open for a while (~30 s), then closes by itself (~10 s) — and pressing the button again *always* means "up": while closing it reverses, while open it stays open longer. There is no sensor and none is needed.
 
